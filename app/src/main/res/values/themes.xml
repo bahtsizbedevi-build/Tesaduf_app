@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base window theme; all real UI is Compose. -->
+    <style name="Theme.Tesaduf" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/tesaduf_night</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- System splash (Android 12+ / compat): plain night background so it blends
+         into the animated Compose splash without a double logo flash. -->
+    <style name="Theme.Tesaduf.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/tesaduf_night</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
+        <item name="postSplashScreenTheme">@style/Theme.Tesaduf</item>
+    </style>
+</resources>

@@ -12,3 +12,5 @@ captures/
 supabase/.temp/
 supabase/.branches/
 node_modules/
+/app/google-services.json
+firebase-service-account*.json

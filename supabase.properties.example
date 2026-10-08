@@ -1,0 +1,3 @@
+# Copy to supabase.properties (git-ignored) and fill in. Public anon/publishable key ONLY.
+SUPABASE_URL=https://gdjhaptxksabqapevego.supabase.co
+SUPABASE_ANON_KEY=

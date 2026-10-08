@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TESADÜF</string>
+    <string name="brand_wordmark">TESADÜF</string>
+    <string name="logo_content_description">TESADÜF logosu</string>
+
+    <!-- Common -->
+    <string name="loading">Yükleniyor</string>
+    <string name="back">Geri</string>
+    <string name="close">Kapat</string>
+    <string name="cancel">Vazgeç</string>
+    <string name="ok">Tamam</string>
+    <string name="retry">Tekrar dene</string>
+    <string name="read_only">Değiştirilemez</string>
+    <string name="avatar_content_description">Anonim avatar</string>
+    <string name="avatar_poke">Avatarı dürt</string>
+    <string name="accessory_none">Yok</string>
+    <string name="accessory_beanie">Bere</string>
+    <string name="accessory_cap">Kep</string>
+    <string name="accessory_party">Parti Şapkası</string>
+    <string name="accessory_crown">Taç</string>
+    <string name="accessory_headphones">Kulaklık</string>
+    <string name="accessory_glasses">Gözlük</string>
+    <string name="accessory_cat">Kedi Kulağı</string>
+    <string name="accessory_halo">Hale</string>
+
+    <!-- Onboarding -->
+    <string name="onb_skip">Geç</string>
+    <string name="onb_next">İleri</string>
+    <string name="onb_start">Başlayalım</string>
+    <string name="onb1_title">Hiç tanımadığın biriyle tamamen tesadüfen karşılaş.</string>
+    <string name="onb1_f1">Anonim ve güvenli</string>
+    <string name="onb1_f2">15 dakikalık sohbetler</string>
+    <string name="onb1_f3">Yeni insanlarla tanış</string>
+    <string name="onb1_f4">Belki de kader…</string>
+    <string name="onb2_title">Tamamen anonim.</string>
+    <string name="onb2_body">İsim, telefon ya da e-posta yok. Sadece sana özel anonim bir kimlik.</string>
+    <string name="onb3_title">15 dakikalık bir sohbet.</string>
+    <string name="onb3_body">Her tesadüf 15 dakika sürer. Süre bitince devam edip etmeyeceğine sen karar verirsin.</string>
+    <string name="onb4_title">Belki de bir tesadüf daha fazlasıdır.</string>
+    <string name="onb4_body">İkiniz de devam derseniz kader devreye girer ve sohbetiniz süresiz devam eder.</string>
+    <string name="onb_page">Sayfa %1$d / %2$d</string>
+
+    <!-- Profile setup -->
+    <string name="profile_title">Profilini Oluştur</string>
+    <string name="profile_edit_title">Avatarını Değiştir</string>
+    <string name="profile_sub">Gerçek kimliğin gerekmez.\nBurada herkes anonim.</string>
+    <string name="profile_id_label">Anonim ID (otomatik)</string>
+    <string name="profile_color_note">Rengini tesadüf seçti</string>
+    <string name="profile_accessory">Aksesuar</string>
+    <string name="profile_continue">Devam Et</string>
+    <string name="profile_save">Kaydet</string>
+    <string name="profile_preparing">Anonim kimliğin hazırlanıyor…</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Ana Sayfa</string>
+    <string name="nav_chats">Sohbetler</string>
+    <string name="nav_settings">Ayarlar</string>
+
+    <!-- Home -->
+    <string name="home_start">TESADÜFÜ BAŞLAT</string>
+    <string name="home_caption">15 dakikalık anonim bir sohbet.</string>
+    <string name="stat_tesaduf">Tesadüf</string>
+    <string name="stat_destiny">Kader</string>
+    <string name="stat_streak">Gün Serisi</string>
+    <string name="stat_best_streak">En İyi Seri</string>
+    <string name="badges_title">Rozetler (%1$d/%2$d)</string>
+    <string name="badge_first_tesaduf">İlk Tesadüf</string>
+    <string name="badge_first_tesaduf_hint">İlk tesadüfünü yaşa.</string>
+    <string name="badge_first_kader">İlk Kader</string>
+    <string name="badge_first_kader_hint">İlk Kader eşleşmeni yakala.</string>
+    <string name="badge_ten">10 Tesadüf</string>
+    <string name="badge_ten_hint">10 tesadüf yaşa.</string>
+    <string name="badge_streak">3 Gün Seri</string>
+    <string name="badge_streak_hint">3 gün üst üste tesadüf yap.</string>
+    <string name="badge_night">Gece Kuşu</string>
+    <string name="badge_night_hint">Gece yarısından sonra bir tesadüf yaşa.</string>
+    <string name="badge_chatty">Sohbet Ustası</string>
+    <string name="badge_chatty_hint">100 mesaj gönder.</string>
+    <string name="badge_kader5">Kader Avcısı</string>
+    <string name="badge_kader5_hint">5 Kader eşleşmesi yakala.</string>
+    <string name="unlock_party">5 tesadüf</string>
+    <string name="unlock_crown">İlk Kader</string>
+    <string name="unlock_headphones">3 gün seri</string>
+    <string name="unlock_cat">10 tesadüf</string>
+    <string name="unlock_halo">100 mesaj</string>
+    <string name="meet_title">Merhaba de!</string>
+    <string name="meet_body">Yeni bir tesadüf başladı</string>
+    <string name="home_live_title">Devam eden bir tesadüfün var</string>
+    <plurals name="home_live_many">
+        <item quantity="one">Devam eden %1$d tesadüfün var</item>
+        <item quantity="other">Devam eden %1$d tesadüfün var</item>
+    </plurals>
+    <string name="home_live_open">Aç</string>
+
+    <!-- Cinematic intro / matchmaking story -->
+    <string name="cine_wordmark">Tesadüf</string>
+    <string name="cine_connecting">Bağlantılar kuruluyor…</string>
+    <string name="cine_new_chats">Yeni sohbetler yolda…</string>
+    <string name="cine_preparing">Bir tesadüf hazırlanıyor…</string>
+    <string name="cine_searching">Sana uygun biri aranıyor…</string>
+    <string name="cine_crossing">Yollarınız kesişmek üzere…</string>
+    <string name="cine_moment">İşte o an…</string>
+
+    <!-- Matchmaking -->
+    <plurals name="mm_others_waiting">
+        <item quantity="one">%1$d kişi daha arıyor</item>
+        <item quantity="other">%1$d kişi daha arıyor</item>
+    </plurals>
+    <string name="mm_not_found">Şu an biraz sessiz…</string>
+    <string name="mm_not_found_sub">Henüz uygun bir tesadüf bulunamadı. Biraz daha arayalım mı?</string>
+    <string name="mm_keep_searching">Aramaya devam et</string>
+    <string name="mm_timeout_title">Şu anda uygun kimse yok.</string>
+    <string name="mm_timeout_body">Seni boşuna bekletmeyelim. Birazdan tekrar dene; yeni insanlar her an gelebilir.</string>
+    <string name="mm_retry">Tekrar Dene</string>
+    <string name="mm_home">Ana Sayfa</string>
+    <string name="mm_cancel">İptal Et</string>
+
+    <!-- Chat -->
+    <string name="chat_menu">Seçenekler</string>
+    <string name="chat_partner_online">Çevrimiçi</string>
+    <string name="chat_partner_away">Bağlantısı zayıf</string>
+    <string name="chat_reconnecting">Yeniden bağlanıyor…</string>
+    <string name="chat_input_hint">Mesaj yaz…</string>
+    <string name="chat_send">Gönder</string>
+        <string name="chat_empty_sub">Karşındaki kişi de senin gibi anonim. Saygılı ol, keyfini çıkar.</string>
+    <string name="chat_sending">Gönderiliyor</string>
+    <string name="chat_failed">Gönderilemedi · Tekrar dene</string>
+    <string name="chat_timer_destiny">Kader</string>
+    <string name="chat_destiny_banner">Kader devrede. Artık süre sınırı yok.</string>
+    <string name="timer_remaining">Kalan süre %1$s</string>
+
+    <string name="menu_block">Kullanıcıyı Engelle</string>
+    <string name="menu_report">Kullanıcıyı Bildir</string>
+    <string name="menu_end">Tesadüfü Bitir</string>
+    <string name="menu_cancel">İptal</string>
+    <string name="menu_block_sub">Bu kişiyle bir daha eşleşmezsin</string>
+    <string name="menu_report_sub">Uygunsuz davranışı bize ilet</string>
+    <string name="menu_end_sub">Sohbet iki taraf için de kapanır</string>
+
+    <string name="confirm_end_title">Tesadüfü bitirmek istiyor musun?</string>
+    <string name="confirm_end_body">Sohbet iki taraf için de kapanacak.</string>
+    <string name="confirm_yes_end">Bitir</string>
+    <string name="confirm_block_title">Kullanıcıyı engellemek istiyor musun?</string>
+    <string name="confirm_block_body">Bu kullanıcıyla tekrar eşleşmeyeceksin.</string>
+    <string name="confirm_yes_block">Engelle</string>
+    <string name="blocked_title">Kullanıcı Engellendi</string>
+    <string name="blocked_body">Bu kullanıcıyla artık eşleşmeyeceksin.</string>
+
+    <string name="report_title">Kullanıcıyı Bildir</string>
+    <string name="report_body">Bildirdiğin kişi engellenir ve sohbet sona erer.</string>
+    <string name="report_send">Raporu Gönder</string>
+    <string name="report_spam">Spam</string>
+    <string name="report_insult">Hakaret</string>
+    <string name="report_harassment">Taciz</string>
+    <string name="report_inappropriate">Uygunsuz içerik</string>
+    <string name="report_other">Diğer</string>
+    <string name="report_done">Bildirimin alındı. Kullanıcı engellendi.</string>
+
+    <string name="chat_typing">yazıyor…</string>
+    <string name="chat_seen">Görüldü</string>
+    <string name="chat_delivered">Gönderildi</string>
+    <string name="chat_flagged">Bu mesaj uygunsuz ifadeler içerebilir. Görmek için dokun.</string>
+    <string name="chat_react_hint">Tepki vermek için mesaja basılı tut</string>
+    <string name="icebreaker_label">Buz kırıcı</string>
+    <string name="icebreaker_tap">Dokun, mesaj kutusuna eklensin</string>
+    <string name="reaction_heart">Kalp</string>
+    <string name="reaction_laugh">Kahkaha</string>
+    <string name="reaction_wow">Vay</string>
+    <string name="reaction_sad">Üzgün</string>
+    <string name="reaction_fire">Ateş</string>
+    <string-array name="icebreakers">
+        <item>Bugün seni ne gülümsetti?</item>
+        <item>Hiç gitmediğin ama hayalini kurduğun bir yer?</item>
+        <item>Son zamanlarda dinlediğin en iyi şarkı ne?</item>
+        <item>Süper gücün olsaydı ne olurdu?</item>
+        <item>Hayatında yaşadığın en güzel tesadüf neydi?</item>
+        <item>Kendini üç kelimeyle anlat.</item>
+        <item>Bir günlüğüne herhangi biri olabilseydin kim olurdun?</item>
+        <item>En sevdiğin mevsim hangisi, neden?</item>
+        <item>Gece kuşu musun, sabahçı mı?</item>
+        <item>Tekrar tekrar izleyebileceğin bir film?</item>
+        <item>Bu hafta öğrendiğin ilginç bir şey?</item>
+        <item>Kahve mi çay mı? Savun bakalım.</item>
+    </string-array>
+
+    <!-- Session end / destiny -->
+    <string name="decision_title">Tesadüfünüz sona erdi.</string>
+    <string name="decision_body">Bu sohbeti devam ettirmek ister misin?</string>
+    <string name="decision_continue">DEVAM ET</string>
+    <string name="decision_end">BİTİR</string>
+    <string name="decision_hint_continue">Eğer iki taraf da devam ederse kader devreye girer.</string>
+    <string name="decision_hint_end">Bu sohbet sona erecek.</string>
+    <string name="decision_waiting">Kararın kaydedildi. Karşı tarafı bekliyoruz…</string>
+    <string name="decision_partner_decided">Karşı taraf kararını verdi.</string>
+    <string name="decision_time_left">Karar için kalan süre %1$s</string>
+    <string name="destiny_title">Kader!</string>
+    <string name="destiny_body">İkiniz de devam etmeyi seçtiniz.</string>
+    <string name="destiny_continue">Sohbete Devam Et</string>
+    <string name="destiny_later">Belki Sonra</string>
+
+    <!-- Ended -->
+    <string name="ended_title">Tesadüf sona erdi</string>
+    <string name="ended_expired">Süre doldu ve karar verilmedi.</string>
+    <string name="ended_declined">Bu tesadüf burada sona erdi.</string>
+    <string name="ended_by_you">Tesadüfü sen bitirdin.</string>
+    <string name="ended_by_partner">Karşı taraf tesadüfü bitirdi.</string>
+    <string name="ended_blocked">Kullanıcı engellendi.</string>
+    <string name="ended_reported">Bildirimin alındı, kullanıcı engellendi.</string>
+    <string name="ended_abandoned">Bağlantı koptuğu için tesadüf sona erdi.</string>
+    <string name="ended_new">YENİ TESADÜF</string>
+    <string name="ended_home">Ana Sayfa</string>
+
+    <!-- Chats tab -->
+    <string name="chats_title">Sohbetler</string>
+    <string name="chats_empty_title">Henüz bir sohbetin yok.</string>
+    <string name="chats_empty_sub">Devam eden tesadüflerin ve Kader sohbetlerin burada görünür.</string>
+    <string name="chats_no_messages">Henüz mesaj yok</string>
+
+    <string name="badge_destiny">Kader</string>
+    <string name="badge_active">Aktif</string>
+    <string name="badge_deciding">Karar bekleniyor</string>
+    <string name="preview_you">Sen</string>
+
+    <!-- Settings / profile -->
+    <string name="settings_title">Profil</string>
+    <string name="anonymous_user">Anonim Kullanıcı</string>
+    <string name="settings_change_avatar">Avatarı Değiştir</string>
+    <string name="settings_blocked">Engellenenler</string>
+    <string name="settings_notifications">Bildirimler</string>
+    <string name="settings_about">Hakkında</string>
+    <string name="settings_sign_out">Çıkış Yap</string>
+    <string name="sign_out_title">Çıkış yapmak istiyor musun?</string>
+    <string name="sign_out_body">Anonim kimliğin bu cihazdan silinir. Aynı kimliğe bir daha giriş yapılamaz; yeniden başladığında yeni bir anonim ID alırsın.</string>
+    <string name="notifications_title">Bildirimler</string>
+    <string name="settings_sound">Ses ve Titreşim</string>
+    <string name="sound_body">Uygulamanın küçük sesleri ve dokunsal geri bildirimleri.</string>
+    <string name="sound_sounds">Sesler</string>
+    <string name="sound_sounds_body">Eşleşme, mesaj gönderme ve tepkilerde kısa sesler.</string>
+    <string name="sound_shake">Sallayınca tesadüf</string>
+    <string name="sound_shake_body">Ana sayfada telefonu sallayarak yeni bir tesadüf başlat.</string>
+    <string name="home_shake_hint">İpucu: telefonu salla, tesadüf başlasın.</string>
+    <string name="mod_title">Moderasyon</string>
+    <string name="mod_empty_title">Açık bildirim yok.</string>
+    <string name="mod_empty_body">Yeni bildirimler burada görünür.</string>
+    <string name="mod_meta">Bildiren #%1$s · toplam bildirim: %2$d</string>
+    <string name="mod_reporter">Bildiren</string>
+    <string name="mod_dismiss">Yoksay</string>
+    <string name="mod_suspend">Askıya Al</string>
+    <string name="notifications_haptics">Eşleşmede titreşim</string>
+    <string name="notifications_haptics_body">Bir tesadüf bulunduğunda telefonun hafifçe titrer.</string>
+    <string name="notifications_body">Seni unutmayalım: bir süre uğramazsan küçük bir hatırlatma gönderelim.</string>
+    <string name="notifications_reminders">Hatırlatmalar</string>
+    <string name="notifications_reminders_body">Birkaç gün uğramazsan, gündüz saatlerinde nazik bir hatırlatma.</string>
+    <string name="notifications_permission_denied">Bildirim izni kapalı. Telefon ayarlarından TESADÜF için bildirimlere izin verebilirsin.</string>
+    <string name="notif_channel_reminders">Hatırlatmalar</string>
+    <string name="notif_channel_messages">Mesajlar</string>
+    <string name="notif_channel_messages_desc">Tesadüflerinden gelen yeni mesajlar</string>
+    <string name="notif_message_title">%1$s sana yazdı</string>
+    <string name="notif_message_hidden">Yeni bir mesajın var.</string>
+    <string name="notif_channel_reminders_desc">Bir süre uğramadığında küçük hatırlatmalar</string>
+    <string name="toggle_on">Açık</string>
+    <string name="toggle_off">Kapalı</string>
+    <string-array name="reminder_messages">
+        <item>Bir tesadüf seni bekliyor olabilir.</item>
+        <item>Bugün kiminle karşılaşacağını merak etmiyor musun?</item>
+        <item>15 dakika, yeni bir hikâye. Hazır mısın?</item>
+        <item>Kader bazen tek bir dokunuş uzağında.</item>
+        <item>Şu anda biri konuşacak birini arıyor olabilir.</item>
+        <item>Son tesadüfünün üzerinden epey zaman geçti. Yenisine ne dersin?</item>
+    </string-array>
+    <string-array name="home_quotes">
+        <item>Bazen tek bir mesaj her şeyi değiştirir.</item>
+        <item>Kim olduğun değil, ne söylediğin önemli.</item>
+        <item>Her sohbet yeni bir hikâye.</item>
+        <item>15 dakika, bir ömür kadar uzun olabilir.</item>
+        <item>Tanımadığın biri, en iyi dinleyicin olabilir.</item>
+        <item>Tesadüfler, kaderin imzasıdır.</item>
+        <item>Kiminle karşılaşacağını bilmiyorsun. Güzel olan da bu.</item>
+        <item>Maskeler düşer, kelimeler kalır.</item>
+        <item>Bir merhaba, bir hikâyenin ilk cümlesidir.</item>
+        <item>Kader bazen sadece \"devam et\" demeni bekler.</item>
+    </string-array>
+    <string name="about_title">TESADÜF</string>
+    <string name="about_body">Sürüm %1$s\n\nHiç tanımadığın biriyle tamamen anonim, 15 dakikalık bir sohbet. Gerçek kimlik bilgisi istenmez ve saklanmaz.</string>
+
+    <!-- Blocked users -->
+    <string name="blocked_users_title">Engellenenler</string>
+    <string name="blocked_users_empty_title">Engellediğin kimse yok.</string>
+    <string name="blocked_users_empty_sub">Engellediğin kullanıcılar burada görünür.</string>
+    <string name="unblock">Engeli Kaldır</string>
+    <string name="unblock_title">Engeli kaldırmak istiyor musun?</string>
+    <string name="unblock_body">%1$s ile yeniden eşleşebilirsin.</string>
+    <string name="unblocked_done">Engel kaldırıldı.</string>
+
+    <!-- Errors (never raw exceptions) -->
+    <string name="error_no_internet">Bağlantı kurulamadı. İnternet bağlantını kontrol et.</string>
+    <string name="error_timeout">Bağlantı zaman aşımına uğradı.</string>
+    <string name="error_session">Oturum yenilenemedi. Tekrar dene.</string>
+    <string name="error_not_configured">Sunucu yapılandırması eksik. Lütfen daha sonra tekrar dene.</string>
+    <string name="error_suspended">Hesabın topluluk kuralları nedeniyle askıya alındı.</string>
+    <string name="error_match_not_found">Bu tesadüf artık mevcut değil.</string>
+    <string name="error_match_closed">Bu tesadüf artık mesaj kabul etmiyor.</string>
+    <string name="error_rate_limited">Biraz yavaşla, çok hızlı gönderiyorsun.</string>
+    <string name="error_invalid">Geçersiz istek.</string>
+    <string name="error_accessory_locked">Bu aksesuarın kilidi henüz açılmadı.</string>
+    <string name="error_server">Bir şeyler ters gitti. Tekrar dene.</string>
+</resources>
