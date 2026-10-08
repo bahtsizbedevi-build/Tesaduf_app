@@ -50,5 +50,6 @@ object TIcons {
     val Check: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_check)
     val CheckCheck: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_check_check)
     val Lightbulb: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_lightbulb)
+    val Volume: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_volume_2)
     val Hourglass: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_hourglass)
 }

@@ -34,7 +34,13 @@ import kotlinx.coroutines.launch
 
 sealed interface SessionState {
     data object Loading : SessionState
-    data class Ready(val profile: Profile, val stats: ProfileStats, val liveMatch: Match?) : SessionState
+    data class Ready(
+        val profile: Profile,
+        val stats: ProfileStats,
+        val liveMatch: Match?,
+        val liveCount: Int = 0,
+        val isAdmin: Boolean = false,
+    ) : SessionState
     data class Failed(val error: AppError) : SessionState
 }
 
@@ -73,7 +79,7 @@ class TesadufRepository(
         }
     }
 
-    private fun BootstrapResult.toReady() = SessionState.Ready(profile, stats, liveMatch?.takeIf { it.isOpen })
+    private fun BootstrapResult.toReady() = SessionState.Ready(profile, stats, liveMatch?.takeIf { it.isOpen }, liveCount, isAdmin)
 
     /** Keeps Home's "return to chat" card in sync without another request. */
     fun onLiveMatchChanged(match: Match) {
@@ -123,6 +129,8 @@ class TesadufRepository(
         api.report(matchId, reason)
 
     suspend fun myChats(): Outcome<List<ChatSummary>> = api.myChats()
+    suspend fun adminReports() = api.adminReports()
+    suspend fun adminResolve(reportId: Long, suspend: Boolean) = api.adminResolve(reportId, suspend)
     suspend fun markRead(matchId: String, lastId: Long) = api.markRead(matchId, lastId)
     suspend fun react(messageId: Long, reaction: Reaction?): Outcome<ChatMessage> = api.react(messageId, reaction)
     fun sendTyping(matchId: String) = realtime.sendTyping(matchId)

@@ -37,6 +37,9 @@ const rpcErrorStatus: Record<string, number> = {
   INVALID_AVATAR: 400,
   INVALID_BLOCK_ID: 400,
   INVALID_REACTION: 400,
+  INVALID_STATUS: 400,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
 };
 
 function json(status: number, body: unknown): Response {

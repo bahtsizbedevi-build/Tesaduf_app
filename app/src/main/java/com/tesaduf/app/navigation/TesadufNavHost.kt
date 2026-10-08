@@ -46,6 +46,8 @@ import com.tesaduf.app.ui.onboarding.OnboardingScreen
 import com.tesaduf.app.ui.profile.ProfileSetupScreen
 import com.tesaduf.app.ui.settings.BlockedUsersScreen
 import com.tesaduf.app.ui.settings.BlockedUsersViewModel
+import com.tesaduf.app.ui.settings.ModerationScreen
+import com.tesaduf.app.ui.settings.ModerationViewModel
 import com.tesaduf.app.ui.settings.SettingsScreen
 import com.tesaduf.app.ui.splash.SplashScreen
 
@@ -57,6 +59,7 @@ object Routes {
     const val CHATS = "chats"
     const val SETTINGS = "settings"
     const val BLOCKED = "blocked"
+    const val MODERATION = "moderation"
     const val MATCHMAKING = "matchmaking"
     const val CHAT = "chat/{matchId}"
 
@@ -142,6 +145,7 @@ fun TesadufNavHost(container: AppContainer, navController: NavHostController = r
                     repository = repository,
                     onStart = { navController.navigate(Routes.MATCHMAKING) { launchSingleTop = true } },
                     onResume = { matchId -> navController.navigate(Routes.chat(matchId)) { launchSingleTop = true } },
+                    onOpenChats = { goToTab(Routes.CHATS) },
                 )
             }
             composable(Routes.CHATS) {
@@ -158,6 +162,7 @@ fun TesadufNavHost(container: AppContainer, navController: NavHostController = r
                     repository = repository,
                     onChangeAvatar = { navController.navigate(Routes.profileSetup(edit = true)) },
                     onBlocked = { navController.navigate(Routes.BLOCKED) },
+                    onModeration = { navController.navigate(Routes.MODERATION) },
                     onSignedOut = {
                         navController.navigate(Routes.ONBOARDING) {
                             popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
@@ -168,6 +173,10 @@ fun TesadufNavHost(container: AppContainer, navController: NavHostController = r
             composable(Routes.BLOCKED) {
                 val vm: BlockedUsersViewModel = viewModel(factory = viewModelFactory { initializer { BlockedUsersViewModel(repository) } })
                 BlockedUsersScreen(vm, onBack = { navController.popBackStack() })
+            }
+            composable(Routes.MODERATION) {
+                val vm: ModerationViewModel = viewModel(factory = viewModelFactory { initializer { ModerationViewModel(repository) } })
+                ModerationScreen(vm, onBack = { navController.popBackStack() })
             }
             composable(Routes.MATCHMAKING) {
                 val vm: MatchmakingViewModel = viewModel(factory = viewModelFactory { initializer { MatchmakingViewModel(repository) } })

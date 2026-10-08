@@ -41,10 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,7 +54,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -67,8 +67,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tesaduf.app.R
 import com.tesaduf.app.model.Match
-import com.tesaduf.app.network.AppError
-import com.tesaduf.app.network.Outcome
 import com.tesaduf.app.notifications.Reminders
 import com.tesaduf.app.repository.SessionState
 import com.tesaduf.app.repository.TesadufRepository
@@ -77,12 +75,10 @@ import com.tesaduf.app.ui.design.TIcons
 import com.tesaduf.app.ui.design.TesadufAvatar
 import com.tesaduf.app.ui.design.TesadufBackground
 import com.tesaduf.app.ui.design.TesadufButton
-import com.tesaduf.app.ui.design.TesadufDialog
 import com.tesaduf.app.ui.design.TesadufGlassCard
 import com.tesaduf.app.ui.design.TesadufInlineMessage
 import com.tesaduf.app.ui.design.TesadufLoadingDots
 import com.tesaduf.app.ui.design.TesadufQuoteTicker
-import com.tesaduf.app.ui.design.TesadufSecondaryButton
 import com.tesaduf.app.ui.design.TesadufStatsCard
 import com.tesaduf.app.ui.design.TesadufWordmark
 import com.tesaduf.app.ui.design.softGlow
@@ -91,7 +87,6 @@ import com.tesaduf.app.ui.theme.IdTextStyle
 import com.tesaduf.app.ui.theme.Shapes
 import com.tesaduf.app.ui.theme.TesadufColors
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -104,6 +99,7 @@ fun HomeScreen(
     repository: TesadufRepository,
     onStart: () -> Unit,
     onResume: (matchId: String) -> Unit,
+    onOpenChats: () -> Unit,
 ) {
     val session by repository.session.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -123,6 +119,13 @@ fun HomeScreen(
             delay(1_200)
             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    val shakeEnabled by repository.preferences.shake.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
+    ShakeToStart(enabled = shakeEnabled && session is SessionState.Ready) {
+        if (repository.preferences.haptics.value) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        onStart()
     }
 
     TesadufBackground {
@@ -156,7 +159,7 @@ fun HomeScreen(
                     is SessionState.Failed -> Box(Modifier.padding(top = 40.dp)) {
                         TesadufInlineMessage(state.error, onRetry = { repository.refreshSession(showLoading = true) })
                     }
-                    is SessionState.Ready -> ReadyContent(state, repository, onStart, onResume)
+                    is SessionState.Ready -> ReadyContent(state, onStart, onResume, onOpenChats)
                 }
             }
         }
@@ -166,14 +169,10 @@ fun HomeScreen(
 @Composable
 private fun ReadyContent(
     state: SessionState.Ready,
-    repository: TesadufRepository,
     onStart: () -> Unit,
     onResume: (String) -> Unit,
+    onOpenChats: () -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-    var confirmReplace by remember { mutableStateOf(false) }
-    var ending by remember { mutableStateOf(false) }
-    var endError by remember { mutableStateOf<AppError?>(null) }
     val live: Match? = state.liveMatch
     val heroSize = (windowWidthDp() * 0.78f).coerceIn(250f, 340f).dp
 
@@ -206,13 +205,17 @@ private fun ReadyContent(
                     Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     fill = TesadufColors.Purple.copy(alpha = 0.10f),
                     stroke = TesadufColors.Purple.copy(alpha = 0.35f),
-                    onClick = { onResume(live.id) },
+                    onClick = { if (state.liveCount > 1) onOpenChats() else onResume(live.id) },
                 ) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         TesadufAvatar(live.partner.avatar, 44.dp, alive = false)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(stringResource(R.string.home_live_title), style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                if (state.liveCount > 1) pluralStringResource(R.plurals.home_live_many, state.liveCount, state.liveCount)
+                                else stringResource(R.string.home_live_title),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
                             Text(live.partner.displayId, style = IdTextStyle.copy(fontSize = 13.sp, color = TesadufColors.TextSecondary))
                         }
                         Text(stringResource(R.string.home_live_open), style = MaterialTheme.typography.labelMedium, color = TesadufColors.Cyan)
@@ -221,10 +224,10 @@ private fun ReadyContent(
             }
         }
 
-        // Always available: a live tesadüf only asks for confirmation first.
+        // Always available: any number of tesadüfs can run at the same time.
         TesadufButton(
             text = stringResource(R.string.home_start),
-            onClick = { if (live != null) confirmReplace = true else onStart() },
+            onClick = onStart,
             tone = ButtonTone.Signature,
             icon = TIcons.Sparkles,
             minHeight = 68.dp,
@@ -234,44 +237,8 @@ private fun ReadyContent(
         )
         Spacer(Modifier.height(12.dp))
         Text(stringResource(R.string.home_caption), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
-    }
-
-    if (confirmReplace && live != null) {
-        TesadufDialog(
-            title = stringResource(R.string.replace_title),
-            body = stringResource(R.string.replace_body, live.partner.displayId),
-            onDismiss = { if (!ending) confirmReplace = false },
-        ) {
-            endError?.let { TesadufInlineMessage(it, Modifier.padding(bottom = 12.dp)) }
-            TesadufButton(
-                stringResource(R.string.replace_confirm),
-                onClick = {
-                    ending = true
-                    endError = null
-                    scope.launch {
-                        when (val result = repository.endMatch(live.id)) {
-                            is Outcome.Success -> {
-                                repository.onLiveMatchChanged(result.value)
-                                confirmReplace = false
-                                onStart()
-                            }
-                            is Outcome.Failure -> endError = result.error
-                        }
-                        ending = false
-                    }
-                },
-                loading = ending,
-                tone = ButtonTone.Heart,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(10.dp))
-            TesadufSecondaryButton(
-                stringResource(R.string.home_live_resume_short),
-                onClick = { confirmReplace = false; onResume(live.id) },
-                enabled = !ending,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        Spacer(Modifier.height(6.dp))
+        Text(stringResource(R.string.home_shake_hint), style = MaterialTheme.typography.labelSmall, color = TesadufColors.TextMuted, textAlign = TextAlign.Center)
     }
 }
 

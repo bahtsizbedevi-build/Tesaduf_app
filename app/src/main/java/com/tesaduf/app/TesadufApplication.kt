@@ -12,6 +12,7 @@ import com.tesaduf.app.network.ServerClock
 import com.tesaduf.app.notifications.Reminders
 import com.tesaduf.app.network.createHttpClient
 import com.tesaduf.app.repository.TesadufRepository
+import com.tesaduf.app.ui.design.SoundFx
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,6 +24,7 @@ class AppContainer(app: Application) {
     private val clock = ServerClock()
     private val session = SessionManager(http, config, PrefsSessionStorage(app))
     val preferences = AppPreferences(app)
+    val soundFx = SoundFx(app, preferences)
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val networkMonitor = NetworkMonitor(app)
     val repository = TesadufRepository(

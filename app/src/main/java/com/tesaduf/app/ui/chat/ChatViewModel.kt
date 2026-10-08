@@ -16,6 +16,7 @@ import com.tesaduf.app.network.AppError
 import com.tesaduf.app.network.Outcome
 import com.tesaduf.app.network.parseInstantMillis
 import com.tesaduf.app.repository.TesadufRepository
+import com.tesaduf.app.ui.design.AvatarMood
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -60,6 +61,8 @@ data class ChatUiState(
     val partnerTyping: Boolean = false,
     /** Same ice-breaker for both sides of a match (derived from the match id). */
     val icebreakerIndex: Int = 0,
+    val partnerMood: AvatarMood = AvatarMood.Idle,
+    val myMood: AvatarMood = AvatarMood.Idle,
 )
 
 /**
@@ -85,6 +88,10 @@ class ChatViewModel(
     private var visible = false
     private var lastTypingSentAt = 0L
     private var typingClearJob: Job? = null
+    private var partnerMoodJob: Job? = null
+    private var myMoodJob: Job? = null
+    private var lastActivityAt = System.currentTimeMillis()
+    private val knownReactions = mutableMapOf<Long, String?>()
 
     /** true = also re-read the latest window (reactions changed on existing messages). */
     private val syncRequests = Channel<Boolean>(Channel.CONFLATED)
@@ -127,6 +134,17 @@ class ChatViewModel(
             while (isActive) {
                 delay(HEARTBEAT_MS)
                 (repository.heartbeat(matchId) as? Outcome.Success)?.value?.match?.let(::applyMatch)
+            }
+        }
+        // Quiet for a while -> both avatars doze off; any activity wakes them up.
+        jobs += viewModelScope.launch {
+            while (isActive) {
+                delay(5_000)
+                val quiet = System.currentTimeMillis() - lastActivityAt > SLEEPY_AFTER_MS
+                val s = _state.value
+                if (quiet && s.match?.status == MatchStatus.ACTIVE && s.partnerMood == AvatarMood.Idle) {
+                    _state.update { it.copy(partnerMood = AvatarMood.Sleepy, myMood = AvatarMood.Sleepy) }
+                }
             }
         }
         // Server decides expiry; we just ask promptly when our (server-synced) clock says it's time.
@@ -205,6 +223,13 @@ class ChatViewModel(
 
     private fun mergeServerMessages(messages: List<ChatMessage>) {
         if (messages.isEmpty()) return
+        // A new heart on one of my messages: the partner's avatar falls in love for a moment.
+        val newHeartOnMine = messages.any { m ->
+            m.mine && m.reaction == "heart" && knownReactions.containsKey(m.id) && knownReactions[m.id] != "heart"
+        }
+        messages.forEach { knownReactions[it.id] = it.reaction }
+        if (newHeartOnMine) flashPartnerMood(AvatarMood.Love)
+        if (messages.any { it.id > lastServerId }) wake()
         for (m in messages) {
             serverMessages[m.id] = m
             pending.remove(m.clientId)
@@ -236,6 +261,10 @@ class ChatViewModel(
         ) incoming.copy(myDecision = current.myDecision) else incoming
         val becameDestiny = current != null && current.status != MatchStatus.DESTINY && merged.status == MatchStatus.DESTINY
         _state.update { it.copy(match = merged, celebrateDestiny = it.celebrateDestiny || becameDestiny) }
+        if (becameDestiny) {
+            flashPartnerMood(AvatarMood.Joy, 3_000)
+            flashMyMood(AvatarMood.Joy, 3_000)
+        }
         repository.onLiveMatchChanged(merged)
         if (merged.status == MatchStatus.ENDED) onHidden()
     }
@@ -250,7 +279,36 @@ class ChatViewModel(
 
     private fun isEnded() = _state.value.match?.status == MatchStatus.ENDED || _state.value.fatalError != null
 
+    private fun wake() {
+        lastActivityAt = System.currentTimeMillis()
+        _state.update {
+            it.copy(
+                partnerMood = if (it.partnerMood == AvatarMood.Sleepy) AvatarMood.Idle else it.partnerMood,
+                myMood = if (it.myMood == AvatarMood.Sleepy) AvatarMood.Idle else it.myMood,
+            )
+        }
+    }
+
+    private fun flashPartnerMood(mood: AvatarMood, ms: Long = 2_200) {
+        partnerMoodJob?.cancel()
+        _state.update { it.copy(partnerMood = mood) }
+        partnerMoodJob = viewModelScope.launch {
+            delay(ms)
+            _state.update { it.copy(partnerMood = AvatarMood.Idle) }
+        }
+    }
+
+    private fun flashMyMood(mood: AvatarMood, ms: Long = 1_200) {
+        myMoodJob?.cancel()
+        _state.update { it.copy(myMood = mood) }
+        myMoodJob = viewModelScope.launch {
+            delay(ms)
+            _state.update { it.copy(myMood = AvatarMood.Idle) }
+        }
+    }
+
     private fun showPartnerTyping() {
+        wake()
         _state.update { it.copy(partnerTyping = true) }
         typingClearJob?.cancel()
         typingClearJob = viewModelScope.launch {
@@ -273,6 +331,8 @@ class ChatViewModel(
         if (body.isEmpty() || body.length > MAX_MESSAGE_LENGTH) return false
         if (status != MatchStatus.ACTIVE && status != MatchStatus.DESTINY) return false
         val clientId = UUID.randomUUID().toString()
+        wake()
+        flashMyMood(AvatarMood.Joy)
         pending[clientId] = PendingMessage(body, failed = false)
         publishMessages()
         deliver(clientId)
@@ -317,6 +377,8 @@ class ChatViewModel(
         if (message.mine) return
         val old = serverMessages[id] ?: return
         val newValue = if (Reaction.from(old.reaction) == reaction) null else reaction
+        wake()
+        if (newValue == Reaction.HEART) flashMyMood(AvatarMood.Love, 1_800)
         serverMessages[id] = old.copy(reaction = newValue?.wire)
         publishMessages()
         viewModelScope.launch {
@@ -408,5 +470,6 @@ class ChatViewModel(
         private const val EXPIRY_CHECK_MS = 1_500L
         private const val TYPING_THROTTLE_MS = 1_500L
         private const val TYPING_VISIBLE_MS = 3_500L
+        private const val SLEEPY_AFTER_MS = 60_000L
     }
 }

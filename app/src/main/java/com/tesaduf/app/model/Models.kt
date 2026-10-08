@@ -85,6 +85,27 @@ data class BootstrapResult(
     val profile: Profile,
     val stats: ProfileStats = ProfileStats(),
     @SerialName("live_match") val liveMatch: Match? = null,
+    @SerialName("live_count") val liveCount: Int = 0,
+    @SerialName("is_admin") val isAdmin: Boolean = false,
+)
+
+@Serializable
+data class AdminEvidence(
+    @SerialName("from_reported") val fromReported: Boolean,
+    val body: String,
+)
+
+@Serializable
+data class AdminReport(
+    val id: Long,
+    val reason: String,
+    val details: String? = null,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("reported_id") val reportedId: String,
+    @SerialName("reported_avatar") val reportedAvatar: String,
+    @SerialName("reporter_id") val reporterId: String,
+    @SerialName("times_reported") val timesReported: Int = 1,
+    val evidence: List<AdminEvidence> = emptyList(),
 )
 
 @Serializable

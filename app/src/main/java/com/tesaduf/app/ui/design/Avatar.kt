@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
@@ -105,6 +106,7 @@ fun TesadufAvatar(
     modifier: Modifier = Modifier,
     alive: Boolean = true,
     gaze: Offset? = null,
+    mood: AvatarMood = AvatarMood.Idle,
     contentDescription: String? = null,
 ) {
     val style = AvatarStyle.parse(avatarKey)
@@ -140,6 +142,19 @@ fun TesadufAvatar(
             }
         }
     }
+    // Mood transitions: a little hop for joy/love, eyes droop when sleepy.
+    val hop = remember { Animatable(0f) }
+    val moodBlend = remember { Animatable(0f) }
+    LaunchedEffect(mood) {
+        moodBlend.snapTo(0f)
+        launch { moodBlend.animateTo(1f, tween(260)) }
+        if (mood == AvatarMood.Joy || mood == AvatarMood.Love) {
+            hop.animateTo(1f, tween(160, easing = FastOutSlowInEasing))
+            hop.animateTo(0f, spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMedium))
+        }
+    }
+    val currentMood = rememberUpdatedState(mood)
+
     LaunchedEffect(gaze) {
         // Released: ease back to centre, then idle glances take over.
         val g = gaze ?: Offset.Zero
@@ -151,8 +166,9 @@ fun TesadufAvatar(
         modifier
             .size(size)
             .semantics { this.contentDescription = description }
+            .graphicsLayer { translationY = -hop.value * size.toPx() * 0.12f }
             .drawBehind {
-                drawOrb(from, to, eyeOpen.value, Offset(lookX.value, lookY.value))
+                drawOrb(from, to, eyeOpen.value, Offset(lookX.value, lookY.value), currentMood.value, moodBlend.value)
                 drawAccessory(style.accessory)
             },
     )
@@ -162,23 +178,63 @@ fun TesadufAvatar(
 private fun DrawScope.orbCenter() = Offset(size.width / 2, size.height * 0.62f)
 private fun DrawScope.orbRadius() = size.minDimension * 0.33f
 
-private fun DrawScope.drawOrb(from: Color, to: Color, eyeOpen: Float, look: Offset) {
+private fun DrawScope.drawOrb(from: Color, to: Color, eyeOpen: Float, look: Offset, mood: AvatarMood, blend: Float) {
     val c = orbCenter()
     val r = orbRadius()
     softGlow(from, c, r * 1.45f, 0.28f)
     drawCircle(Brush.linearGradient(listOf(from, to), c - Offset(r, r), c + Offset(r, r)), r, c)
     // Gloss highlight.
     softGlow(Color.White, c - Offset(r * 0.38f, r * 0.45f), r * 0.55f, 0.38f)
-    // Eyes follow the look direction; blinking squashes their height.
+    // Eyes follow the look direction; blinking squashes their height. Moods reshape them.
     val eyeW = r * 0.17f
-    val eyeH = r * 0.30f * eyeOpen.coerceIn(0.05f, 1f)
     val shift = Offset(look.x * r * 0.22f, look.y * r * 0.18f)
-    val eyeY = c.y - r * 0.08f + shift.y - eyeH / 2
+    val white = Color.White.copy(alpha = 0.96f * blend.coerceIn(0.3f, 1f))
     for (dx in listOf(-0.24f, 0.24f)) {
-        val x = c.x + r * dx + shift.x - eyeW / 2
-        drawOval(Color.White.copy(alpha = 0.96f), Offset(x, eyeY), Size(eyeW, eyeH))
+        val ex = c.x + r * dx + shift.x
+        val ey = c.y - r * 0.08f + shift.y
+        when (mood) {
+            AvatarMood.Love -> {
+                val s = r * 0.26f * (0.6f + 0.4f * blend)
+                val heart = Path().apply {
+                    moveTo(ex, ey + s * 0.45f)
+                    cubicTo(ex - s * 0.75f, ey - s * 0.05f, ex - s * 0.45f, ey - s * 0.6f, ex, ey - s * 0.25f)
+                    cubicTo(ex + s * 0.45f, ey - s * 0.6f, ex + s * 0.75f, ey - s * 0.05f, ex, ey + s * 0.45f)
+                    close()
+                }
+                drawPath(heart, Color(0xFFFFE3F3))
+            }
+            AvatarMood.Joy -> {
+                // Happy "^ ^" arcs.
+                drawArc(
+                    white, 200f, 140f, false,
+                    Offset(ex - eyeW * 0.9f, ey - eyeW * 0.5f), Size(eyeW * 1.8f, eyeW * 1.6f),
+                    style = Stroke(r * 0.07f, cap = StrokeCap.Round),
+                )
+            }
+            AvatarMood.Sleepy -> {
+                // Heavy lids: a low, flat oval.
+                val h = r * 0.07f
+                drawOval(white, Offset(ex - eyeW / 2, ey + r * 0.06f - h / 2), Size(eyeW * 1.1f, h))
+            }
+            AvatarMood.Idle -> {
+                val eyeH = r * 0.30f * eyeOpen.coerceIn(0.05f, 1f)
+                drawOval(white, Offset(ex - eyeW / 2, ey - eyeH / 2), Size(eyeW, eyeH))
+            }
+        }
+    }
+    if (mood == AvatarMood.Sleepy) {
+        // A small floating "z".
+        val z = Offset(c.x + r * 0.7f, c.y - r * 0.85f)
+        val zs = r * 0.18f
+        val zPath = Path().apply {
+            moveTo(z.x, z.y); lineTo(z.x + zs, z.y); lineTo(z.x, z.y + zs); lineTo(z.x + zs, z.y + zs)
+        }
+        drawPath(zPath, Color.White.copy(alpha = 0.7f * blend), style = Stroke(r * 0.05f, cap = StrokeCap.Round))
     }
 }
+
+/** Facial expression of the living avatar. */
+enum class AvatarMood { Idle, Love, Joy, Sleepy }
 
 private fun DrawScope.drawAccessory(accessory: Accessory) {
     val c = orbCenter()

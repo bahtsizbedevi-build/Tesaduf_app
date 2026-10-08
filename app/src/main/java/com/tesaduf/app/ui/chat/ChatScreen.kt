@@ -94,6 +94,9 @@ import com.tesaduf.app.ui.design.ButtonTone
 import com.tesaduf.app.ui.design.FloatingHearts
 import com.tesaduf.app.ui.design.HeartsIllustration
 import com.tesaduf.app.ui.design.HourglassIllustration
+import com.tesaduf.app.ui.design.AvatarMood
+import com.tesaduf.app.ui.design.LocalSoundFx
+import com.tesaduf.app.ui.design.UiSound
 import com.tesaduf.app.ui.design.TesadufAvatar
 import com.tesaduf.app.ui.design.TesadufBackground
 import com.tesaduf.app.ui.design.TesadufBadge
@@ -155,6 +158,7 @@ fun ChatScreen(
     }
 
     var overlay by rememberSaveable { mutableStateOf<ChatOverlay?>(null) }
+    val sound = LocalSoundFx.current
     // Sheets and dialogs must never open underneath the keyboard.
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -182,6 +186,7 @@ fun ChatScreen(
                 online = online,
                 messageCount = state.messages.size,
                 partnerTyping = state.partnerTyping,
+                partnerMood = state.partnerMood,
                 typingGaze = typingGaze,
                 serverNow = serverNow,
                 onBack = onBack,
@@ -244,7 +249,7 @@ fun ChatScreen(
                                 icebreaker = icebreaker.takeIf { match?.isOpen == true },
                                 onIcebreaker = { prefill = it },
                                 onRetry = viewModel::retry,
-                                onReact = viewModel::react,
+                                onReact = { m, r -> sound?.play(UiSound.React); viewModel.react(m, r) },
                             )
                         }
                     }
@@ -256,9 +261,10 @@ fun ChatScreen(
                             typingGaze = typingGaze,
                             onTypingGaze = { typingGaze = it },
                             onTyping = viewModel::onTyping,
+                            myMood = state.myMood,
                             prefill = prefill,
                             onPrefillConsumed = { prefill = null },
-                            onSend = viewModel::send,
+                            onSend = { text -> viewModel.send(text).also { if (it) sound?.play(UiSound.Send) } },
                         )
                     }
                 }
@@ -364,6 +370,7 @@ private fun ChatTopBar(
     online: Boolean,
     messageCount: Int,
     partnerTyping: Boolean,
+    partnerMood: AvatarMood,
     typingGaze: Offset?,
     serverNow: () -> Long,
     onBack: () -> Unit,
@@ -387,6 +394,7 @@ private fun ChatTopBar(
             // Watches the user's text from above while they type; otherwise glances / idles.
             TesadufAvatar(
                 match.partner.avatar, 46.dp,
+                mood = if (match.status == MatchStatus.DESTINY && partnerMood == AvatarMood.Idle) AvatarMood.Idle else partnerMood,
                 gaze = when {
                     partnerTyping -> Offset(-0.5f, 0.9f) // busy typing on their side
                     typingGaze != null -> Offset(typingGaze.x, 1f)
@@ -700,6 +708,7 @@ private fun Composer(
     typingGaze: Offset?,
     onTypingGaze: (Offset?) -> Unit,
     onTyping: () -> Unit,
+    myMood: AvatarMood,
     prefill: String?,
     onPrefillConsumed: () -> Unit,
     onSend: (String) -> Boolean,
@@ -734,7 +743,7 @@ private fun Composer(
             verticalAlignment = Alignment.Bottom,
         ) {
             if (myAvatar != null) {
-                TesadufAvatar(myAvatar, 46.dp, gaze = typingGaze, modifier = Modifier.padding(bottom = 4.dp))
+                TesadufAvatar(myAvatar, 46.dp, gaze = typingGaze, mood = myMood, modifier = Modifier.padding(bottom = 4.dp))
                 Spacer(Modifier.width(6.dp))
             }
             Row(

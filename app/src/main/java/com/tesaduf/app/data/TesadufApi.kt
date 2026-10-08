@@ -1,5 +1,6 @@
 package com.tesaduf.app.data
 
+import com.tesaduf.app.model.AdminReport
 import com.tesaduf.app.model.BlockedUser
 import com.tesaduf.app.model.BootstrapResult
 import com.tesaduf.app.model.Profile
@@ -110,6 +111,16 @@ class TesadufApi(
             buildJsonObject { put("message_id", messageId); put("reaction", reaction?.wire) },
             ChatMessage.serializer(),
         )
+
+    suspend fun adminReports(): Outcome<List<AdminReport>> =
+        call("admin", buildJsonObject { put("action", "reports") }, ListSerializer(AdminReport.serializer()))
+
+    suspend fun adminResolve(reportId: Long, suspend: Boolean): Outcome<Unit> =
+        call(
+            "admin",
+            buildJsonObject { put("action", "resolve"); put("report_id", reportId); put("decision", if (suspend) "suspend" else "dismiss") },
+            JsonElement.serializer(),
+        ).ignoreValue()
 
     suspend fun myChats(limit: Int = 50): Outcome<List<ChatSummary>> =
         call("my-chats", buildJsonObject { put("limit", limit) }, ListSerializer(ChatSummary.serializer()))

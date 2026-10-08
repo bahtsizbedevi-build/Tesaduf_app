@@ -16,6 +16,22 @@ class AppPreferences(context: Context) {
     private val _reminders = MutableStateFlow(prefs.getBoolean(KEY_REMINDERS, true))
     val reminders: StateFlow<Boolean> = _reminders.asStateFlow()
 
+    private val _sounds = MutableStateFlow(prefs.getBoolean(KEY_SOUNDS, true))
+    val sounds: StateFlow<Boolean> = _sounds.asStateFlow()
+
+    private val _shake = MutableStateFlow(prefs.getBoolean(KEY_SHAKE, true))
+    val shake: StateFlow<Boolean> = _shake.asStateFlow()
+
+    fun setSounds(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_SOUNDS, enabled) }
+        _sounds.value = enabled
+    }
+
+    fun setShake(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_SHAKE, enabled) }
+        _shake.value = enabled
+    }
+
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING, false)
         set(value) = prefs.edit { putBoolean(KEY_ONBOARDING, value) }
@@ -45,6 +61,8 @@ class AppPreferences(context: Context) {
         const val KEY_ONBOARDING = "onboarding_done"
         const val KEY_HAPTICS = "haptics"
         const val KEY_REMINDERS = "reminders"
+        const val KEY_SOUNDS = "sounds"
+        const val KEY_SHAKE = "shake"
         const val KEY_NOTIF_PROMPT = "notif_prompt_shown"
         const val KEY_LAST_OPENED = "last_opened_at"
         const val KEY_LAST_REMINDER = "last_reminder_at"

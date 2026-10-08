@@ -7,7 +7,9 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.runtime.CompositionLocalProvider
 import com.tesaduf.app.navigation.TesadufNavHost
+import com.tesaduf.app.ui.design.LocalSoundFx
 import com.tesaduf.app.notifications.Reminders
 import com.tesaduf.app.ui.theme.TesadufTheme
 
@@ -23,7 +25,9 @@ class MainActivity : ComponentActivity() {
         val container = (application as TesadufApplication).container
         setContent {
             TesadufTheme {
-                TesadufNavHost(container)
+                CompositionLocalProvider(LocalSoundFx provides container.soundFx) {
+                    TesadufNavHost(container)
+                }
             }
         }
         // Debug-only hook for manual testing:  adb shell am start -n com.tesaduf.app/.MainActivity --ez debug_reminder true

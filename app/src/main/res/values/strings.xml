@@ -59,11 +59,11 @@
     <string name="stat_tesaduf">Tesadüf</string>
     <string name="stat_destiny">Kader</string>
     <string name="home_live_title">Devam eden bir tesadüfün var</string>
+    <plurals name="home_live_many">
+        <item quantity="one">Devam eden %1$d tesadüfün var</item>
+        <item quantity="other">Devam eden %1$d tesadüfün var</item>
+    </plurals>
     <string name="home_live_open">Aç</string>
-    <string name="home_live_resume_short">Sohbete Dön</string>
-    <string name="replace_title">Yeni bir tesadüf mü?</string>
-    <string name="replace_body">%1$s ile devam eden tesadüfün sona erecek. Yeni birini başlatmak istiyor musun?</string>
-    <string name="replace_confirm">Bitir ve Yeni Başlat</string>
 
     <!-- Cinematic intro / matchmaking story -->
     <string name="cine_wordmark">Tesadüf</string>
@@ -205,6 +205,20 @@
     <string name="sign_out_title">Çıkış yapmak istiyor musun?</string>
     <string name="sign_out_body">Anonim kimliğin bu cihazdan silinir. Aynı kimliğe bir daha giriş yapılamaz; yeniden başladığında yeni bir anonim ID alırsın.</string>
     <string name="notifications_title">Bildirimler</string>
+    <string name="settings_sound">Ses ve Titreşim</string>
+    <string name="sound_body">Uygulamanın küçük sesleri ve dokunsal geri bildirimleri.</string>
+    <string name="sound_sounds">Sesler</string>
+    <string name="sound_sounds_body">Eşleşme, mesaj gönderme ve tepkilerde kısa sesler.</string>
+    <string name="sound_shake">Sallayınca tesadüf</string>
+    <string name="sound_shake_body">Ana sayfada telefonu sallayarak yeni bir tesadüf başlat.</string>
+    <string name="home_shake_hint">İpucu: telefonu salla, tesadüf başlasın.</string>
+    <string name="mod_title">Moderasyon</string>
+    <string name="mod_empty_title">Açık bildirim yok.</string>
+    <string name="mod_empty_body">Yeni bildirimler burada görünür.</string>
+    <string name="mod_meta">Bildiren #%1$s · toplam bildirim: %2$d</string>
+    <string name="mod_reporter">Bildiren</string>
+    <string name="mod_dismiss">Yoksay</string>
+    <string name="mod_suspend">Askıya Al</string>
     <string name="notifications_haptics">Eşleşmede titreşim</string>
     <string name="notifications_haptics_body">Bir tesadüf bulunduğunda telefonun hafifçe titrer.</string>
     <string name="notifications_body">Seni unutmayalım: bir süre uğramazsan küçük bir hatırlatma gönderelim.</string>

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,6 +60,7 @@ import com.tesaduf.app.util.formatClock
 fun ChatsScreen(viewModel: ChatListViewModel, serverNow: () -> Long, onOpen: (String) -> Unit, onStart: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
     LifecycleResumeEffect(viewModel) {
         viewModel.refresh()
         onPauseOrDispose { }
@@ -92,10 +95,30 @@ fun ChatsScreen(viewModel: ChatListViewModel, serverNow: () -> Long, onOpen: (St
                     modifier = Modifier.fillMaxSize().padding(bottom = BottomBarSpace),
                 )
                 else -> LazyColumn(
+                    state = listState,
                     contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = BottomBarSpace),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(open, key = { it.id }) { chat -> ChatRow(chat, serverNow, onOpen, Modifier.animateItem()) }
+                    items(open, key = { it.id }) { chat ->
+                        ChatRow(
+                            chat, serverNow, onOpen,
+                            Modifier
+                                .animateItem()
+                                .graphicsLayer {
+                                    val info = listState.layoutInfo
+                                    val item = info.visibleItemsInfo.firstOrNull { it.key == chat.id } ?: return@graphicsLayer
+                                    val viewport = (info.viewportEndOffset - info.viewportStartOffset).toFloat().coerceAtLeast(1f)
+                                    val center = item.offset + item.size / 2f
+                                    val d = ((center / viewport) - 0.5f) * 2f // -1 top .. 1 bottom
+                                    val edge = (kotlin.math.abs(d) - 0.55f).coerceAtLeast(0f) / 0.45f
+                                    rotationX = -d * 10f * edge
+                                    scaleX = 1f - 0.05f * edge
+                                    scaleY = scaleX
+                                    alpha = 1f - 0.35f * edge
+                                    cameraDistance = 12f * density
+                                },
+                        )
+                    }
                 }
             }
         }

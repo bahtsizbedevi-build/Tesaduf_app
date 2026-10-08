@@ -63,17 +63,20 @@ import com.tesaduf.app.ui.theme.Shapes
 import com.tesaduf.app.ui.theme.TesadufColors
 import kotlinx.coroutines.launch
 
-private enum class SettingsDialog { NOTIFICATIONS, ABOUT, SIGN_OUT }
+private enum class SettingsDialog { NOTIFICATIONS, SOUND, ABOUT, SIGN_OUT }
 
 @Composable
 fun SettingsScreen(
     repository: TesadufRepository,
     onChangeAvatar: () -> Unit,
     onBlocked: () -> Unit,
+    onModeration: () -> Unit,
     onSignedOut: () -> Unit,
 ) {
     val session by repository.session.collectAsStateWithLifecycle()
     val haptics by repository.preferences.haptics.collectAsStateWithLifecycle()
+    val sounds by repository.preferences.sounds.collectAsStateWithLifecycle()
+    val shake by repository.preferences.shake.collectAsStateWithLifecycle()
     val reminders by repository.preferences.reminders.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var permissionDenied by rememberSaveable { mutableStateOf(false) }
@@ -116,6 +119,10 @@ fun SettingsScreen(
                         TesadufListRow(TIcons.Palette, stringResource(R.string.settings_change_avatar), onChangeAvatar)
                         TesadufListRow(TIcons.Block, stringResource(R.string.settings_blocked), onBlocked)
                         TesadufListRow(TIcons.Bell, stringResource(R.string.settings_notifications), { dialog = SettingsDialog.NOTIFICATIONS })
+                        TesadufListRow(TIcons.Volume, stringResource(R.string.settings_sound), { dialog = SettingsDialog.SOUND })
+                        if (ready?.isAdmin == true) {
+                            TesadufListRow(TIcons.ShieldAlert, stringResource(R.string.mod_title), onModeration, iconTint = TesadufColors.Warning)
+                        }
                         TesadufListRow(TIcons.Info, stringResource(R.string.settings_about), { dialog = SettingsDialog.ABOUT })
                     }
                 }
@@ -160,12 +167,20 @@ fun SettingsScreen(
                     modifier = Modifier.padding(vertical = 6.dp),
                 )
             }
+            Spacer(Modifier.height(16.dp))
+            TesadufSecondaryButton(stringResource(R.string.ok), { dialog = null }, Modifier.fillMaxWidth())
+        }
+        SettingsDialog.SOUND -> TesadufDialog(
+            title = stringResource(R.string.settings_sound),
+            body = stringResource(R.string.sound_body),
+            onDismiss = { dialog = null },
+        ) {
+            ToggleRow(stringResource(R.string.sound_sounds), stringResource(R.string.sound_sounds_body), sounds, repository.preferences::setSounds)
             ToggleRow(
-                label = stringResource(R.string.notifications_haptics),
-                description = stringResource(R.string.notifications_haptics_body),
-                checked = haptics,
-                onToggle = repository.preferences::setHaptics,
+                stringResource(R.string.notifications_haptics), stringResource(R.string.notifications_haptics_body),
+                haptics, repository.preferences::setHaptics,
             )
+            ToggleRow(stringResource(R.string.sound_shake), stringResource(R.string.sound_shake_body), shake, repository.preferences::setShake)
             Spacer(Modifier.height(16.dp))
             TesadufSecondaryButton(stringResource(R.string.ok), { dialog = null }, Modifier.fillMaxWidth())
         }

@@ -301,6 +301,37 @@ check("reaction visible in list", lst.messages.find((x) => x.id === m1r.id)?.rea
 check("reaction can be cleared", (await rpc("gul", "select public.react_message($1,null)", [m1r.id])).reaction === null);
 void fresh; void ggId;
 
+console.log("\n# Concurrent tesadüfs");
+for (const n of ["hale", "ilker", "jale"]) { await newUser(n); await rpc(n, "select public.ensure_profile()"); }
+await rpc("hale", "select public.find_match('text')");
+const c1m = await rpc("ilker", "select public.find_match('text')");
+check("hale & ilker matched", c1m.state === "matched");
+const haleGets = await rpc("hale", "select public.find_match('text')");
+check("waiting side picks up the match", haleGets.state === "matched" && haleGets.match.id === c1m.match.id);
+const again2 = await rpc("hale", "select public.find_match('text')");
+check("can search again while a tesadüf is live", again2.state === "waiting");
+const c2m = await rpc("jale", "select public.find_match('text')");
+check("second concurrent tesadüf created", c2m.state === "matched" && c2m.match.id !== c1m.match.id);
+await rpc("hale", "select public.find_match('text')");
+await rpc("ilker", "select public.find_match('text')");
+const sameAgain = await rpc("hale", "select public.find_match('text')");
+check("same pair never gets a second live chat", sameAgain.state === "waiting");
+const bs = await rpc("hale", "select public.ensure_profile()");
+check("bootstrap counts live tesadüfs", bs.live_count === 2, JSON.stringify(bs.live_count));
+for (const n of ["hale", "ilker"]) await rpc(n, "select public.cancel_matchmaking()");
+
+console.log("\n# Moderation");
+check("non-admin cannot list reports", (await rpcError("ali", "select public.admin_reports('open')"))?.includes("FORBIDDEN"));
+check("is_admin false by default", (await as("ali", "select public.is_admin() as a"))[0].a === false);
+await db.query("insert into public.admins(user_id) values ($1)", [users.ali]);
+check("is_admin true for admin", (await as("ali", "select public.is_admin() as a"))[0].a === true);
+const reps = await rpc("ali", "select public.admin_reports('open')");
+check("admin sees open reports with evidence", reps.length >= 1 && Array.isArray(reps[0].evidence) && reps[0].reported_id, JSON.stringify(reps[0] ?? null).slice(0, 200));
+check("admin payload has no uuids", !JSON.stringify(reps).match(/[0-9a-f]{8}-[0-9a-f]{4}-/) || reps.every((r) => typeof r.id === "number"));
+await rpc("ali", "select public.admin_resolve($1,'suspend')", [reps[0].id]);
+check("suspend closes reports", (await rpc("ali", "select public.admin_reports('open')")).length === 0);
+check("invalid admin action rejected", (await rpcError("ali", "select public.admin_resolve($1,'nuke')", [reps[0].id]))?.includes("INVALID_ACTION"));
+
 console.log("\n# Suspended account");
 await db.query("update public.profiles set status='suspended' where id=$1", [users.deniz]);
 check("suspended user cannot match", (await rpcError("deniz", "select public.find_match('text')"))?.includes("ACCOUNT_SUSPENDED"));

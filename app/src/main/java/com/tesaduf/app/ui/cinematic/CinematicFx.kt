@@ -7,11 +7,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalView
+import com.tesaduf.app.ui.design.LocalSoundFx
+import com.tesaduf.app.ui.design.UiSound
 
 /**
- * Optional sound for story beats. Not wired to any audio yet (sound is off by default);
- * plug a SoundPool-backed implementation in here when assets exist:
- * whoosh (Whoosh), sparkle (Sparkle), soft click (Connect), magical chime (Chime).
+ * Sound for story beats: whoosh (Whoosh), sparkle (Sparkle), soft click (Connect),
+ * chime (Chime). Defaults to the app SoundFx; the "Sesler" setting turns it off.
  */
 fun interface CinematicSound {
     fun play(cue: CinematicCue)
@@ -34,8 +35,21 @@ private fun View.haptic(cue: CinematicCue) {
 
 /** Returns the cue handler to give a [CinematicDirector]. */
 @Composable
-fun rememberCinematicFx(hapticsEnabled: Boolean, sound: CinematicSound = CinematicSound.Silent): (CinematicCue) -> Unit {
+fun rememberCinematicFx(hapticsEnabled: Boolean, sound: CinematicSound? = null): (CinematicCue) -> Unit {
     val view = LocalView.current
+    val fx = LocalSoundFx.current
+    val sound = sound ?: remember(fx) {
+        CinematicSound { cue ->
+            fx?.play(
+                when (cue) {
+                    CinematicCue.Sparkle -> UiSound.Sparkle
+                    CinematicCue.Whoosh -> UiSound.Whoosh
+                    CinematicCue.Connect -> UiSound.Tick
+                    CinematicCue.Chime -> UiSound.Chime
+                },
+            )
+        }
+    }
     val haptics = rememberUpdatedState(hapticsEnabled)
     return remember(view, sound) {
         { cue ->
