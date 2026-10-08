@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TESADÜF</string>
+    <string name="brand_wordmark">TESADÜF</string>
+    <string name="slogan">Bazen en güzel şeyler tamamen tesadüftür.</string>
+    <string name="logo_content_description">TESADÜF logosu</string>
+
+    <!-- Home -->
+    <string name="home_identity_label">ANONİM KİMLİĞİN</string>
+    <string name="home_ready">Anonim olarak hazırsın.</string>
+    <string name="home_start">TESADÜFÜ BAŞLAT</string>
+    <string name="home_hint">15 dakika · Tamamen anonim · Gerçek kimlik yok</string>
+    <string name="home_live_title">Devam eden bir tesadüfün var</string>
+    <string name="home_live_resume">SOHBETE DÖN</string>
+    <string name="home_history">Geçmiş tesadüfler</string>
+    <string name="home_loading">Anonim kimliğin hazırlanıyor…</string>
+
+    <!-- Matchmaking -->
+    <string name="mm_searching">Bir tesadüf aranıyor…</string>
+    <string name="mm_searching_sub">Seni tamamen rastgele biriyle eşleştiriyoruz.</string>
+    <plurals name="mm_others_waiting">
+        <item quantity="one">%1$d kişi daha arıyor</item>
+        <item quantity="other">%1$d kişi daha arıyor</item>
+    </plurals>
+    <string name="mm_not_found">Henüz uygun bir tesadüf bulunamadı.</string>
+    <string name="mm_not_found_sub">Aramaya devam ediyoruz. İstersen bekleyebilir ya da sonra tekrar deneyebilirsin.</string>
+    <string name="mm_keep_searching">Aramaya devam et</string>
+    <string name="mm_cancel">Vazgeç</string>
+    <string name="mm_found">Tesadüf bulundu!</string>
+
+    <!-- Chat -->
+    <string name="chat_back">Geri</string>
+    <string name="chat_menu">Seçenekler</string>
+    <string name="chat_partner_online">Çevrimiçi</string>
+    <string name="chat_partner_away">Bağlantısı zayıf</string>
+    <string name="chat_reconnecting">Yeniden bağlanıyor…</string>
+    <string name="chat_input_hint">Bir mesaj yaz…</string>
+    <string name="chat_send">Gönder</string>
+    <string name="chat_empty_title">Merhaba de 👋</string>
+    <string name="chat_empty_sub">Karşındaki kişi de senin gibi anonim. Saygılı ol, keyfini çıkar.</string>
+    <string name="chat_sending">Gönderiliyor</string>
+    <string name="chat_failed">Gönderilemedi · Tekrar dene</string>
+    <string name="chat_timer_destiny">Kader</string>
+    <string name="chat_destiny_banner">Kader sizi buluşturdu ❤ Artık süre sınırı yok.</string>
+
+    <string name="menu_end">Tesadüfü Bitir</string>
+    <string name="menu_block">Engelle</string>
+    <string name="menu_report">Bildir</string>
+
+    <string name="confirm_end_title">Tesadüfü bitir?</string>
+    <string name="confirm_end_body">Sohbet iki taraf için de kapanacak.</string>
+    <string name="confirm_block_title">Kullanıcıyı engelle?</string>
+    <string name="confirm_block_body">Bu kişiyle bir daha asla eşleşmeyeceksin ve sohbet sona erecek.</string>
+    <string name="confirm_yes_end">Bitir</string>
+    <string name="confirm_yes_block">Engelle</string>
+    <string name="cancel">Vazgeç</string>
+
+    <string name="report_title">Neden bildiriyorsun?</string>
+    <string name="report_body">Bildirdiğin kişi engellenir ve sohbet sona erer.</string>
+    <string name="report_send">Bildir</string>
+    <string name="report_spam">Spam</string>
+    <string name="report_insult">Hakaret</string>
+    <string name="report_harassment">Taciz</string>
+    <string name="report_inappropriate">Uygunsuz içerik</string>
+    <string name="report_other">Diğer</string>
+    <string name="report_done">Bildirimin alındı. Kullanıcı engellendi.</string>
+    <string name="block_done">Kullanıcı engellendi.</string>
+
+    <!-- Decision -->
+    <string name="decision_title">Tesadüfünüz sona erdi.</string>
+    <string name="decision_body">İkiniz de devam etmek isterseniz kader devreye girer ve sohbetiniz süresiz devam eder.</string>
+    <string name="decision_continue">❤  DEVAM ET</string>
+    <string name="decision_end">✕  BİTİR</string>
+    <string name="decision_waiting">Kararın kaydedildi. Karşı tarafı bekliyoruz…</string>
+    <string name="decision_partner_decided">Karşı taraf kararını verdi.</string>
+    <string name="decision_time_left">Karar için kalan süre %1$s</string>
+
+    <!-- Ended -->
+    <string name="ended_title">Tesadüf sona erdi</string>
+    <string name="ended_expired">Süre doldu ve karar verilmedi.</string>
+    <string name="ended_declined">Bu tesadüf burada sona erdi.</string>
+    <string name="ended_by_you">Tesadüfü sen bitirdin.</string>
+    <string name="ended_by_partner">Karşı taraf tesadüfü bitirdi.</string>
+    <string name="ended_blocked">Kullanıcı engellendi.</string>
+    <string name="ended_reported">Bildirimin alındı, kullanıcı engellendi.</string>
+    <string name="ended_abandoned">Bağlantı koptuğu için tesadüf sona erdi.</string>
+    <string name="ended_new">YENİ TESADÜF</string>
+    <string name="ended_home">Ana sayfa</string>
+
+    <!-- History -->
+    <string name="history_title">Geçmiş Tesadüfler</string>
+    <string name="history_empty_title">Henüz bir tesadüfün yok</string>
+    <string name="history_empty_sub">İlk tesadüfünü başlattığında burada görünecek.</string>
+    <string name="history_refresh">Yenile</string>
+    <string name="status_active">Aktif</string>
+    <string name="status_deciding">Karar bekleniyor</string>
+    <string name="status_destiny">Kader ❤</string>
+    <string name="status_ended">Bitti</string>
+    <string name="status_ended_destiny">Kaderdi · Bitti</string>
+    <string name="history_you_prefix">Sen: %1$s</string>
+
+    <!-- Errors (never raw exceptions) -->
+    <string name="error_no_internet">İnternet bağlantını kontrol et.</string>
+    <string name="error_timeout">Bağlantı zaman aşımına uğradı.</string>
+    <string name="error_session">Oturum yenilenemedi. Tekrar dene.</string>
+    <string name="error_not_configured">Sunucu yapılandırması eksik. Lütfen daha sonra tekrar dene.</string>
+    <string name="error_suspended">Hesabın topluluk kuralları nedeniyle askıya alındı.</string>
+    <string name="error_match_not_found">Bu tesadüf artık mevcut değil.</string>
+    <string name="error_match_closed">Bu tesadüf artık mesaj kabul etmiyor.</string>
+    <string name="error_rate_limited">Biraz yavaşla, çok hızlı gönderiyorsun.</string>
+    <string name="error_invalid">Geçersiz istek.</string>
+    <string name="error_server">Bir şeyler ters gitti. Tekrar dene.</string>
+    <string name="retry">Tekrar dene</string>
+</resources>

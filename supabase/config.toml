@@ -1,0 +1,35 @@
+# Supabase CLI configuration for TESADÜF.
+project_id = "tesaduf"
+
+[api]
+schemas = ["public"]
+
+[auth]
+# The app signs users in anonymously (no name / phone / e-mail).
+enable_anonymous_sign_ins = true
+
+# JWT checking is done by PostgREST: every function forwards the caller's token
+# to a SECURITY DEFINER RPC that requires auth.uid(). The gateway check is off so
+# the functions also work with the new asymmetric JWT signing keys.
+[functions.bootstrap]
+verify_jwt = false
+[functions.matchmaker]
+verify_jwt = false
+[functions.match-status]
+verify_jwt = false
+[functions.destiny-decision]
+verify_jwt = false
+[functions.end-match]
+verify_jwt = false
+[functions.heartbeat]
+verify_jwt = false
+[functions.messages]
+verify_jwt = false
+[functions.send-message]
+verify_jwt = false
+[functions.my-chats]
+verify_jwt = false
+[functions.block-user]
+verify_jwt = false
+[functions.report-user]
+verify_jwt = false
