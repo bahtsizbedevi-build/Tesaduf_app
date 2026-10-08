@@ -21,6 +21,8 @@ data class MatchmakingUiState(
     val showNotFoundHint: Boolean = false,
     val error: AppError? = null,
     val matchedId: String? = null,
+    /** Searched long enough without anyone: polling stopped, queue left. */
+    val timedOut: Boolean = false,
 )
 
 /**
@@ -37,7 +39,7 @@ class MatchmakingViewModel(private val repository: TesadufRepository) : ViewMode
     private var cancelled = false
 
     fun onVisible() {
-        if (pollJob?.isActive == true || cancelled || _state.value.matchedId != null) return
+        if (pollJob?.isActive == true || cancelled || _state.value.matchedId != null || _state.value.timedOut) return
         pollJob = viewModelScope.launch {
             var failures = 0
             while (isActive) {
@@ -51,12 +53,19 @@ class MatchmakingViewModel(private val repository: TesadufRepository) : ViewMode
                             _state.update { it.copy(matchedId = match.id, error = null) }
                             return@launch
                         }
+                        val waited = System.currentTimeMillis() - _state.value.searchStartedAtMs
+                        if (waited > GIVE_UP_MS) {
+                            // Don't keep people waiting forever: stop, leave the queue, tell them.
+                            repository.cancelQueue()
+                            _state.update { it.copy(timedOut = true, showNotFoundHint = false, error = null) }
+                            pollJob = null
+                            return@launch
+                        }
                         _state.update {
                             it.copy(
                                 othersWaiting = value.othersWaiting,
                                 error = null,
-                                showNotFoundHint = it.showNotFoundHint ||
-                                    System.currentTimeMillis() - it.searchStartedAtMs > NOT_FOUND_HINT_MS,
+                                showNotFoundHint = it.showNotFoundHint || waited > NOT_FOUND_HINT_MS,
                             )
                         }
                         // Jitter de-synchronizes clients polling at the same moment.
@@ -81,6 +90,12 @@ class MatchmakingViewModel(private val repository: TesadufRepository) : ViewMode
         _state.update { it.copy(showNotFoundHint = false, searchStartedAtMs = System.currentTimeMillis()) }
     }
 
+    /** Start a fresh search after a timeout. */
+    fun restart() {
+        _state.value = MatchmakingUiState()
+        onVisible()
+    }
+
     fun retryNow() {
         onHidden()
         onVisible()
@@ -101,6 +116,7 @@ class MatchmakingViewModel(private val repository: TesadufRepository) : ViewMode
         const val POLL_MS = 3_000L
         const val POLL_JITTER_MS = 700L
         const val MAX_BACKOFF_MS = 15_000L
-        const val NOT_FOUND_HINT_MS = 90_000L
+        const val NOT_FOUND_HINT_MS = 40_000L
+        const val GIVE_UP_MS = 120_000L
     }
 }

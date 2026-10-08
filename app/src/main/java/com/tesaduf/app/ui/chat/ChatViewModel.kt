@@ -47,6 +47,10 @@ data class ChatUiState(
     val decisionInFlight: Boolean = false,
     val actionInFlight: Boolean = false,
     @param:StringRes val notice: Int? = null,
+    /** Both sides chose to continue while this screen was open: show the Destiny moment once. */
+    val celebrateDestiny: Boolean = false,
+    /** The user just blocked the partner: show the confirmation screen. */
+    val showBlockedConfirmation: Boolean = false,
 )
 
 /**
@@ -192,7 +196,8 @@ class ChatViewModel(
         val merged = if (current != null && incoming.status == current.status &&
             incoming.myDecision == null && current.myDecision != null
         ) incoming.copy(myDecision = current.myDecision) else incoming
-        _state.update { it.copy(match = merged) }
+        val becameDestiny = current != null && current.status != MatchStatus.DESTINY && merged.status == MatchStatus.DESTINY
+        _state.update { it.copy(match = merged, celebrateDestiny = it.celebrateDestiny || becameDestiny) }
         repository.onLiveMatchChanged(merged)
         if (merged.status == MatchStatus.ENDED) onHidden()
     }
@@ -268,7 +273,13 @@ class ChatViewModel(
 
     fun endMatch() = runAction(null) { repository.endMatch(matchId).toSafety() }
 
-    fun block() = runAction(R.string.block_done) { repository.block(matchId) }
+    fun block() = runAction(null, onSuccess = { _state.update { it.copy(showBlockedConfirmation = true) } }) {
+        repository.block(matchId)
+    }
+
+    fun dismissDestiny() {
+        _state.update { it.copy(celebrateDestiny = false) }
+    }
 
     fun report(reason: ReportReason) = runAction(R.string.report_done) { repository.report(matchId, reason) }
 
@@ -280,7 +291,11 @@ class ChatViewModel(
         _state.update { it.copy(error = null) }
     }
 
-    private fun runAction(@StringRes successNotice: Int?, call: suspend () -> Outcome<SafetyActionResult>) {
+    private fun runAction(
+        @StringRes successNotice: Int?,
+        onSuccess: () -> Unit = {},
+        call: suspend () -> Outcome<SafetyActionResult>,
+    ) {
         if (_state.value.actionInFlight) return
         _state.update { it.copy(actionInFlight = true) }
         viewModelScope.launch {
@@ -288,6 +303,7 @@ class ChatViewModel(
                 is Outcome.Success -> {
                     result.value.match?.let(::applyMatch)
                     _state.update { it.copy(notice = successNotice) }
+                    onSuccess()
                 }
                 is Outcome.Failure -> _state.update { it.copy(error = result.error) }
             }

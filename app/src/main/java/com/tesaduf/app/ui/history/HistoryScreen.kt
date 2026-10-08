@@ -1,7 +1,6 @@
 package com.tesaduf.app.ui.history
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import com.tesaduf.app.ui.design.TIcons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,45 +9,47 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.Alignment
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tesaduf.app.R
 import com.tesaduf.app.model.ChatSummary
 import com.tesaduf.app.model.MatchStatus
 import com.tesaduf.app.network.AppError
 import com.tesaduf.app.network.Outcome
+import com.tesaduf.app.network.parseInstantMillis
 import com.tesaduf.app.repository.TesadufRepository
-import com.tesaduf.app.ui.components.AnonAvatar
-import com.tesaduf.app.ui.components.ErrorBanner
-import com.tesaduf.app.ui.components.GlassSurface
-import com.tesaduf.app.ui.components.NeonSpinner
-import com.tesaduf.app.ui.components.TesadufBackground
+import com.tesaduf.app.ui.design.TesadufAvatar
+import com.tesaduf.app.ui.design.TesadufBackground
+import com.tesaduf.app.ui.design.TesadufBadge
+import com.tesaduf.app.ui.design.TesadufLastMessage
+import com.tesaduf.app.ui.design.TesadufEmptyState
+import com.tesaduf.app.ui.design.TesadufGlassCard
+import com.tesaduf.app.ui.design.TesadufIconButton
+import com.tesaduf.app.ui.design.TesadufInlineMessage
+import com.tesaduf.app.ui.design.TesadufSegmented
+import com.tesaduf.app.ui.design.TesadufSkeletonRow
+import com.tesaduf.app.ui.design.TesadufTopBar
 import com.tesaduf.app.ui.theme.IdTextStyle
 import com.tesaduf.app.ui.theme.TesadufColors
 import com.tesaduf.app.util.formatDayTime
@@ -69,50 +70,84 @@ class HistoryViewModel(private val repository: TesadufRepository) : ViewModel() 
     val state: StateFlow<HistoryUiState> = _state.asStateFlow()
     private var loading = false
 
-    fun refresh() {
+    /** [silent] keeps the current list on screen (no skeleton) during background refreshes. */
+    fun refresh(silent: Boolean = false) {
         if (loading) return
         loading = true
-        _state.update { it.copy(loading = true) }
+        if (!silent) _state.update { it.copy(loading = true) }
         viewModelScope.launch {
             when (val result = repository.myChats()) {
                 is Outcome.Success -> _state.value = HistoryUiState(loading = false, chats = result.value)
-                is Outcome.Failure -> _state.update { it.copy(loading = false, error = result.error) }
+                is Outcome.Failure -> if (!silent) _state.update { it.copy(loading = false, error = result.error) }
             }
             loading = false
         }
     }
 }
 
+enum class HistoryFilter { ALL, DESTINY, COMPLETED }
+
 @Composable
-fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit, onOpen: (String) -> Unit) {
+fun HistoryScreen(
+    viewModel: HistoryViewModel,
+    onBack: () -> Unit,
+    onOpen: (String) -> Unit,
+    onStartFirst: () -> Unit,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var filter by rememberSaveable { mutableStateOf(HistoryFilter.ALL) }
     LifecycleResumeEffect(viewModel) {
         viewModel.refresh()
         onPauseOrDispose { }
     }
+    val visible = state.chats.filter {
+        when (filter) {
+            HistoryFilter.ALL -> true
+            HistoryFilter.DESTINY -> it.isDestiny
+            HistoryFilter.COMPLETED -> it.status == MatchStatus.ENDED
+        }
+    }
 
     TesadufBackground {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.chat_back), tint = TesadufColors.TextPrimary)
-                }
-                Text(stringResource(R.string.history_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                IconButton(onClick = viewModel::refresh, enabled = !state.loading) {
-                    Icon(Icons.Filled.Refresh, stringResource(R.string.history_refresh), tint = TesadufColors.TextSecondary)
-                }
-            }
-            state.error?.let { ErrorBanner(it, Modifier.padding(horizontal = 16.dp), onRetry = viewModel::refresh) }
+            TesadufTopBar(
+                title = stringResource(R.string.history_title),
+                onBack = onBack,
+                actions = {
+                    TesadufIconButton(TIcons.Refresh, stringResource(R.string.retry), viewModel::refresh, enabled = !state.loading, tint = TesadufColors.TextSecondary)
+                },
+            )
+            TesadufSegmented(
+                options = listOf(
+                    HistoryFilter.ALL to stringResource(R.string.filter_all),
+                    HistoryFilter.DESTINY to stringResource(R.string.filter_destiny),
+                    HistoryFilter.COMPLETED to stringResource(R.string.filter_completed),
+                ),
+                selected = filter,
+                onSelect = { filter = it },
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+            )
+            state.error?.let { TesadufInlineMessage(it, Modifier.padding(horizontal = 20.dp, vertical = 4.dp), onRetry = viewModel::refresh) }
             when {
-                state.loading && state.chats.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) { NeonSpinner(40.dp) }
-                state.chats.isEmpty() && state.error == null -> EmptyHistory()
+                state.loading && state.chats.isEmpty() -> Column(
+                    Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) { repeat(4) { TesadufSkeletonRow() } }
+                state.chats.isEmpty() && state.error == null -> TesadufEmptyState(
+                    title = stringResource(R.string.history_empty_title),
+                    body = stringResource(R.string.history_empty_sub),
+                    actionLabel = stringResource(R.string.history_empty_action),
+                    onAction = onStartFirst,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                visible.isEmpty() -> Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.TopCenter) {
+                    Text(stringResource(R.string.history_filter_empty), style = MaterialTheme.typography.bodyMedium)
+                }
                 else -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    items(state.chats, key = { it.id }) { chat ->
-                        HistoryRow(chat, onOpen)
-                    }
+                    items(visible, key = { it.id }) { chat -> HistoryRow(chat, onOpen, Modifier.animateItem()) }
                 }
             }
         }
@@ -120,60 +155,37 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit, onOpen: (Stri
 }
 
 @Composable
-private fun HistoryRow(chat: ChatSummary, onOpen: (String) -> Unit) {
+private fun HistoryRow(chat: ChatSummary, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
     val (label, color) = when {
-        chat.status == MatchStatus.DESTINY -> R.string.status_destiny to TesadufColors.Pink
-        chat.status == MatchStatus.ACTIVE -> R.string.status_active to TesadufColors.Success
-        chat.status == MatchStatus.DECIDING -> R.string.status_deciding to TesadufColors.Warning
-        chat.isDestiny -> R.string.status_ended_destiny to TesadufColors.Purple
-        else -> R.string.status_ended to TesadufColors.TextMuted
+        chat.isDestiny -> stringResource(R.string.badge_destiny) to TesadufColors.Pink
+        chat.status == MatchStatus.ACTIVE -> stringResource(R.string.badge_active) to TesadufColors.Success
+        chat.status == MatchStatus.DECIDING -> stringResource(R.string.badge_deciding) to TesadufColors.Warning
+        else -> stringResource(R.string.badge_completed) to TesadufColors.Cyan
     }
-    GlassSurface(
-        Modifier
-            .fillMaxWidth()
-            .then(if (chat.canOpen) Modifier.clickable { onOpen(chat.id) } else Modifier),
-        shape = RoundedCornerShape(20.dp),
-        fill = if (chat.status == MatchStatus.DESTINY) TesadufColors.Pink.copy(alpha = 0.08f) else TesadufColors.Glass,
+    val start = parseInstantMillis(chat.startedAt)
+    val end = parseInstantMillis(chat.endedAt)
+    val duration = if (start != null && end != null) {
+        stringResource(R.string.duration_minutes, ((end - start) / 60_000L).coerceAtLeast(1).toInt())
+    } else {
+        stringResource(R.string.history_ongoing)
+    }
+    TesadufGlassCard(
+        modifier.fillMaxWidth(),
+        onClick = if (chat.canOpen) ({ onOpen(chat.id) }) else null,
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            AnonAvatar(chat.partner.avatar, 44.dp, glow = false)
+            TesadufAvatar(chat.partner.avatar, 48.dp, alive = false)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(chat.partner.displayId, style = IdTextStyle.copy(fontSize = 15.sp))
-                Text(formatDayTime(chat.startedAt), style = MaterialTheme.typography.bodySmall)
-                chat.lastMessage?.let { last ->
-                    Text(
-                        if (last.mine) stringResource(R.string.history_you_prefix, last.body) else last.body,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TesadufColors.TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                Text("${formatDayTime(chat.startedAt)} • $duration", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                chat.lastMessage?.takeIf { chat.canOpen }?.let { last ->
+                    TesadufLastMessage(last.body, last.mine, chat.partner.displayId, color = TesadufColors.TextMuted)
                 }
             }
             Spacer(Modifier.width(8.dp))
-            Text(
-                stringResource(label),
-                style = MaterialTheme.typography.labelSmall,
-                color = color,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(color.copy(alpha = 0.12f))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            )
+            TesadufBadge(label, color, icon = if (chat.isDestiny) TIcons.Heart else null)
         }
     }
 }
 
-@Composable
-private fun EmptyHistory() {
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(stringResource(R.string.history_empty_title), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(8.dp))
-        Text(stringResource(R.string.history_empty_sub), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-    }
-}

@@ -1,6 +1,9 @@
 package com.tesaduf.app.data
 
+import com.tesaduf.app.model.BlockedUser
 import com.tesaduf.app.model.BootstrapResult
+import com.tesaduf.app.model.Profile
+import com.tesaduf.app.model.UnblockResult
 import com.tesaduf.app.model.ChatMessage
 import com.tesaduf.app.model.ChatSummary
 import com.tesaduf.app.model.Decision
@@ -86,6 +89,15 @@ class TesadufApi(
 
     suspend fun endMatch(matchId: String): Outcome<Match> =
         call("end-match", matchBody(matchId), Match.serializer())
+
+    suspend fun updateAvatar(avatar: String): Outcome<Profile> =
+        call("update-profile", buildJsonObject { put("avatar", avatar) }, Profile.serializer())
+
+    suspend fun blockedUsers(): Outcome<List<BlockedUser>> =
+        call("blocked-users", buildJsonObject { put("action", "list") }, ListSerializer(BlockedUser.serializer()))
+
+    suspend fun unblock(blockId: Long): Outcome<UnblockResult> =
+        call("blocked-users", buildJsonObject { put("action", "unblock"); put("block_id", blockId) }, UnblockResult.serializer())
 
     suspend fun myChats(limit: Int = 50): Outcome<List<ChatSummary>> =
         call("my-chats", buildJsonObject { put("limit", limit) }, ListSerializer(ChatSummary.serializer()))

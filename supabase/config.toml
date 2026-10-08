@@ -33,3 +33,7 @@ verify_jwt = false
 verify_jwt = false
 [functions.report-user]
 verify_jwt = false
+[functions.update-profile]
+verify_jwt = false
+[functions.blocked-users]
+verify_jwt = false

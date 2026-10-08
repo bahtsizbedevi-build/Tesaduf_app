@@ -63,10 +63,31 @@ data class Match(
 }
 
 @Serializable
+data class ProfileStats(
+    @SerialName("tesaduf_count") val tesadufCount: Int = 0,
+    @SerialName("destiny_count") val destinyCount: Int = 0,
+    @SerialName("active_days") val activeDays: Int = 0,
+)
+
+@Serializable
 data class BootstrapResult(
     val profile: Profile,
+    val stats: ProfileStats = ProfileStats(),
     @SerialName("live_match") val liveMatch: Match? = null,
 )
+
+@Serializable
+data class BlockedUser(
+    val id: Long,
+    @SerialName("anonymous_id") val anonymousId: String,
+    val avatar: String,
+    @SerialName("created_at") val createdAt: String,
+) {
+    val displayId: String get() = "#$anonymousId"
+}
+
+@Serializable
+data class UnblockResult(val unblocked: Boolean = false)
 
 @Serializable
 data class MatchmakerResult(
@@ -111,6 +132,8 @@ data class ChatSummary(
     val mode: String = "text",
     @SerialName("status") val rawStatus: String,
     @SerialName("started_at") val startedAt: String,
+    @SerialName("expires_at") val expiresAt: String? = null,
+    @SerialName("decision_deadline") val decisionDeadline: String? = null,
     @SerialName("ended_at") val endedAt: String? = null,
     @SerialName("end_reason") val endReason: String? = null,
     @SerialName("is_destiny") val isDestiny: Boolean = false,

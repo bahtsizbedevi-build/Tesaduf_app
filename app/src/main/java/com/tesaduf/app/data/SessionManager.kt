@@ -85,6 +85,27 @@ class SessionManager(
         session.accessToken
     }
 
+    /**
+     * Signs out of the anonymous account: best-effort server revoke, then forget the
+     * session locally. The next [accessToken] call creates a brand-new anonymous identity.
+     */
+    suspend fun signOut() = mutex.withLock {
+        val current = cached ?: storage.load()
+        if (current != null && config.isConfigured) {
+            runCatching {
+                val request = Request.Builder()
+                    .url("${config.url}/auth/v1/logout")
+                    .header("apikey", config.anonKey)
+                    .header("Authorization", "Bearer ${current.accessToken}")
+                    .post("{}".toRequestBody(JsonMediaType))
+                    .build()
+                http.newCall(request).await()
+            }
+        }
+        storage.clear()
+        cached = null
+    }
+
     private suspend fun refreshOrRecover(current: StoredSession): StoredSession {
         val result = post(
             "${config.url}/auth/v1/token?grant_type=refresh_token",

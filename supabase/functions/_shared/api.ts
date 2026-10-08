@@ -34,6 +34,8 @@ const rpcErrorStatus: Record<string, number> = {
   INVALID_CLIENT_ID: 400,
   INVALID_REASON: 400,
   INVALID_DETAILS: 400,
+  INVALID_AVATAR: 400,
+  INVALID_BLOCK_ID: 400,
 };
 
 function json(status: number, body: unknown): Response {

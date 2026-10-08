@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.tesaduf.app.navigation.TesadufNavHost
+import com.tesaduf.app.notifications.Reminders
 import com.tesaduf.app.ui.theme.TesadufTheme
 
 class MainActivity : ComponentActivity() {
@@ -25,5 +26,18 @@ class MainActivity : ComponentActivity() {
                 TesadufNavHost(container)
             }
         }
+        // Debug-only hook for manual testing:  adb shell am start -n com.tesaduf.app/.MainActivity --ez debug_reminder true
+        if (BuildConfig.DEBUG && intent?.getBooleanExtra(EXTRA_DEBUG_REMINDER, false) == true) {
+            Reminders.fireNowForDebug(this)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        (application as TesadufApplication).container.preferences.markOpened()
+    }
+
+    private companion object {
+        const val EXTRA_DEBUG_REMINDER = "debug_reminder"
     }
 }

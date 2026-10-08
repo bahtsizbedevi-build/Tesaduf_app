@@ -8,15 +8,14 @@
 // RLS is enforced; time travel is done as superuser by shifting timestamps.
 
 import { PGlite } from "@electric-sql/pglite";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const migration = readFileSync(
-  process.env.TESADUF_MIGRATION ?? join(here, "..", "migrations", "20261008000000_tesaduf_init.sql"),
-  "utf8",
-);
+const migrationsDir = process.env.TESADUF_MIGRATIONS ?? join(here, "..", "migrations");
+const migrations = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort()
+  .map((f) => readFileSync(join(migrationsDir, f), "utf8"));
 
 const db = new PGlite();
 let passed = 0;
@@ -44,7 +43,7 @@ await db.exec(`
   grant execute on function auth.uid() to anon, authenticated;
   grant usage on schema public to anon, authenticated;
 `);
-await db.exec(migration);
+for (const m of migrations) await db.exec(m);
 
 const users = {};
 async function newUser(name) {
@@ -93,7 +92,8 @@ const ali1 = await rpc("ali", "select public.ensure_profile()");
 const ali2 = await rpc("ali", "select public.ensure_profile()");
 check("anonymous id format", /^[A-HJ-NP-Z2-9]{8}$/.test(ali1.profile.anonymous_id), ali1.profile.anonymous_id);
 check("anonymous id stable across calls", ali1.profile.anonymous_id === ali2.profile.anonymous_id);
-check("avatar assigned", /^orb_[1-8]$/.test(ali1.profile.avatar));
+check("avatar assigned: random colour, no accessory", /^av_[1-8]_1$/.test(ali1.profile.avatar), ali1.profile.avatar);
+check("stats start at zero", ali1.stats?.tesaduf_count === 0 && ali1.stats?.destiny_count === 0);
 for (const n of ["ayse", "can", "deniz", "ece"]) await rpc(n, "select public.ensure_profile()");
 const ids = new Set();
 for (const n of Object.keys(users)) {
@@ -245,6 +245,28 @@ const h = await rpc("ali", "select public.my_chats(30)");
 check("history lists matches", h.length >= 3);
 check("history marks destiny", h.some((x) => x.is_destiny && x.status === "destiny"));
 check("history has no uuids of partners", !JSON.stringify(h).includes(users.ayse));
+
+console.log("\n# Avatar / stats / blocked users");
+const aliColor = ali1.profile.avatar.split("_")[1];
+const otherColor = aliColor === "1" ? "2" : "1";
+const av = await rpc("ali", `select public.update_avatar('av_${aliColor}_5')`);
+check("accessory updated (crown)", av.avatar === `av_${aliColor}_5`);
+check("colour cannot be changed", (await rpcError("ali", `select public.update_avatar('av_${otherColor}_2')`))?.includes("INVALID_AVATAR"));
+check("invalid avatar rejected", (await rpcError("ali", "select public.update_avatar('orb_9')"))?.includes("INVALID_AVATAR"));
+check("unknown accessory rejected", (await rpcError("ali", `select public.update_avatar('av_${aliColor}_7')`))?.includes("INVALID_AVATAR"));
+check("avatar cannot be set directly", (await rpcError("ali", "update public.profiles set avatar='av_1_1'"))?.includes("permission denied"));
+const st = await rpc("ali", "select public.ensure_profile()");
+check("stats count tesadüfs", st.stats.tesaduf_count >= 3, JSON.stringify(st.stats));
+check("stats count destiny", st.stats.destiny_count === 1, JSON.stringify(st.stats));
+check("stats count active days", st.stats.active_days === 1, JSON.stringify(st.stats));
+const bl = await rpc("ece", "select public.list_blocks()");
+check("list_blocks shows anonymous ids only",
+  bl.length === 1 && /^[A-HJ-NP-Z2-9]{8}$/.test(bl[0].anonymous_id) && !JSON.stringify(bl).includes(users.can));
+check("cannot unblock someone else's block", (await rpc("ali", "select public.unblock($1)", [bl[0].id])).unblocked === false);
+check("unblock works", (await rpc("ece", "select public.unblock($1)", [bl[0].id])).unblocked === true);
+check("blocks list empty after unblock", (await rpc("ece", "select public.list_blocks()")).length === 0);
+check("new helper not callable",
+  (await rpcError("ali", "select public._profile_stats(gen_random_uuid())"))?.includes("permission denied"));
 
 console.log("\n# Suspended account");
 await db.query("update public.profiles set status='suspended' where id=$1", [users.deniz]);
