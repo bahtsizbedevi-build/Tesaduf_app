@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.rotate
 import kotlinx.coroutines.coroutineScope
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -77,7 +78,10 @@ enum class Accessory(val index: Int, val labelRes: Int, val requirementRes: Int?
     Cap(3, R.string.accessory_cap),
     PartyHat(4, R.string.accessory_party, R.string.unlock_party),
     Crown(5, R.string.accessory_crown, R.string.unlock_crown),
-    Headphones(6, R.string.accessory_headphones, R.string.unlock_headphones);
+    Headphones(6, R.string.accessory_headphones, R.string.unlock_headphones),
+    Glasses(7, R.string.accessory_glasses),
+    CatEars(8, R.string.accessory_cat, R.string.unlock_cat),
+    Halo(9, R.string.accessory_halo, R.string.unlock_halo);
 
     companion object {
         fun of(index: Int): Accessory = entries.firstOrNull { it.index == index } ?: None
@@ -93,7 +97,7 @@ data class AvatarStyle(val color: Int, val accessory: Accessory) {
 
     companion object {
         fun parse(key: String?): AvatarStyle {
-            val av = key?.let { Regex("^av_([1-8])_([1-6])$").find(it) }
+            val av = key?.let { Regex("^av_([1-8])_([1-9])$").find(it) }
             if (av != null) return AvatarStyle(av.groupValues[1].toInt(), Accessory.of(av.groupValues[2].toInt()))
             val legacy = key?.removePrefix("orb_")?.toIntOrNull()?.coerceIn(1, 8)
             return AvatarStyle(legacy ?: 1, Accessory.None)
@@ -283,7 +287,7 @@ fun TesadufAvatar(
             }
             .drawBehind {
                 val m = shownMood.value
-                drawOrb(from, to, leftOpen.value, rightOpen.value, Offset(lookX.value, lookY.value), m, moodBlend.value)
+                drawOrb(from, to, leftOpen.value, rightOpen.value, Offset(lookX.value, lookY.value), m, moodBlend.value, time.value)
                 // Accessories lag behind a hop a little (wobble).
                 rotate(-hop.value * 9f + wiggle.value * sin(time.value * 18f) * 6f, orbCenter()) {
                     drawAccessory(style.accessory)
@@ -328,6 +332,7 @@ private fun DrawScope.drawOrb(
     look: Offset,
     mood: AvatarMood,
     blend: Float,
+    t: Float,
 ) {
     val c = orbCenter()
     val r = orbRadius()
@@ -362,7 +367,7 @@ private fun DrawScope.drawOrb(
                 val d = eyeW * 1.35f
                 drawOval(white, Offset(ex - d / 2, ey - d * 0.65f), Size(d, d * 1.3f))
             }
-            AvatarMood.Wink, AvatarMood.Idle -> {
+            AvatarMood.Wink, AvatarMood.Idle, AvatarMood.Wave, AvatarMood.Talking -> {
                 if (open < 0.2f) {
                     // Closed eye: a soft curved line.
                     drawArc(
@@ -392,6 +397,13 @@ private fun DrawScope.drawOrb(
             drawPath(path, MouthDark.copy(alpha = 0.85f))
             drawPath(path, mouth, style = Stroke(r * 0.045f, join = StrokeJoin.Round))
         }
+        AvatarMood.Talking -> {
+            // Chatter: the mouth opens and closes as if speaking.
+            val open = 0.25f + 0.75f * abs(sin(t * 11f) * sin(t * 4.3f + 1f))
+            val w = r * 0.2f
+            val h = r * 0.2f * open
+            drawOval(MouthDark.copy(alpha = 0.85f), Offset(mx - w / 2, my - h * 0.3f), Size(w, h))
+        }
         AvatarMood.Surprised, AvatarMood.Sleepy -> {
             val d = r * (if (mood == AvatarMood.Surprised) 0.16f else 0.1f)
             drawOval(MouthDark.copy(alpha = 0.85f), Offset(mx - d / 2, my - d * 0.3f), Size(d, d * 1.2f))
@@ -401,6 +413,16 @@ private fun DrawScope.drawOrb(
             Offset(mx - r * 0.13f, my - r * 0.12f), Size(r * 0.26f, r * 0.18f),
             style = Stroke(r * 0.045f, cap = StrokeCap.Round),
         )
+    }
+    if (mood == AvatarMood.Wave) {
+        // A little glove waving beside the body.
+        val pivot = Offset(c.x + r * 0.95f, c.y + r * 0.25f)
+        rotate(-25f + 40f * sin(t * 9f), pivot) {
+            val hand = Offset(pivot.x + r * 0.05f, pivot.y - r * 0.55f)
+            drawLine(to, pivot, hand, r * 0.16f, StrokeCap.Round)
+            drawCircle(Brush.linearGradient(listOf(from, to)), r * 0.2f, hand)
+            softGlow(Color.White, hand - Offset(r * 0.06f, r * 0.06f), r * 0.12f, 0.4f)
+        }
     }
     if (mood == AvatarMood.Sleepy) {
         val z = Offset(c.x + r * 0.7f, c.y - r * 0.85f)
@@ -416,7 +438,7 @@ private fun DrawScope.drawOrb(
 }
 
 /** Facial expression of the living avatar. */
-enum class AvatarMood { Idle, Love, Joy, Sleepy, Surprised, Wink }
+enum class AvatarMood { Idle, Love, Joy, Sleepy, Surprised, Wink, Wave, Talking }
 
 private fun DrawScope.drawAccessory(accessory: Accessory) {
     val c = orbCenter()
@@ -476,6 +498,43 @@ private fun DrawScope.drawAccessory(accessory: Accessory) {
                 val x = if (side < 0) c.x - r * 1.18f else c.x + r * 0.86f
                 drawRoundRect(Color(0xFF00E5FF), Offset(x, c.y - r * 0.32f), Size(r * 0.32f, r * 0.58f), CornerRadius(r * 0.14f))
             }
+        }
+        Accessory.Glasses -> {
+            val frame = Color(0xFF0B0F1F)
+            val y = c.y - r * 0.08f
+            for (dx in listOf(-0.27f, 0.27f)) {
+                drawCircle(Color.White.copy(alpha = 0.12f), r * 0.24f, Offset(c.x + r * dx, y))
+                drawCircle(frame, r * 0.24f, Offset(c.x + r * dx, y), style = Stroke(r * 0.07f))
+            }
+            drawLine(frame, Offset(c.x - r * 0.05f, y - r * 0.02f), Offset(c.x + r * 0.05f, y - r * 0.02f), r * 0.06f, StrokeCap.Round)
+            softGlow(Color.White, Offset(c.x - r * 0.33f, y - r * 0.1f), r * 0.07f, 0.6f)
+        }
+        Accessory.CatEars -> {
+            for (side in listOf(-1f, 1f)) {
+                val base = c.x + side * r * 0.55f
+                val outer = Path().apply {
+                    moveTo(base - r * 0.32f, c.y - r * 0.72f)
+                    lineTo(base + side * r * 0.12f, c.y - r * 1.35f)
+                    lineTo(base + r * 0.32f, c.y - r * 0.72f)
+                    close()
+                }
+                drawPath(outer, Color(0xFF2A1F4A))
+                val inner = Path().apply {
+                    moveTo(base - r * 0.16f, c.y - r * 0.8f)
+                    lineTo(base + side * r * 0.08f, c.y - r * 1.18f)
+                    lineTo(base + r * 0.16f, c.y - r * 0.8f)
+                    close()
+                }
+                drawPath(inner, Color(0xFFFF8FD0))
+            }
+        }
+        Accessory.Halo -> {
+            val center = Offset(c.x, c.y - r * 1.25f)
+            softGlow(Color(0xFFFFE08A), center, r * 0.75f, 0.5f)
+            drawOval(
+                Color(0xFFFFD45C), Offset(center.x - r * 0.55f, center.y - r * 0.14f), Size(r * 1.1f, r * 0.28f),
+                style = Stroke(r * 0.09f),
+            )
         }
     }
 }

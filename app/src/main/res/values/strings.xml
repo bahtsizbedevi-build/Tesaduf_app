@@ -20,6 +20,9 @@
     <string name="accessory_party">Parti Şapkası</string>
     <string name="accessory_crown">Taç</string>
     <string name="accessory_headphones">Kulaklık</string>
+    <string name="accessory_glasses">Gözlük</string>
+    <string name="accessory_cat">Kedi Kulağı</string>
+    <string name="accessory_halo">Hale</string>
 
     <!-- Onboarding -->
     <string name="onb_skip">Geç</string>
@@ -79,6 +82,10 @@
     <string name="unlock_party">5 tesadüf</string>
     <string name="unlock_crown">İlk Kader</string>
     <string name="unlock_headphones">3 gün seri</string>
+    <string name="unlock_cat">10 tesadüf</string>
+    <string name="unlock_halo">100 mesaj</string>
+    <string name="meet_title">Merhaba de!</string>
+    <string name="meet_body">Yeni bir tesadüf başladı</string>
     <string name="home_live_title">Devam eden bir tesadüfün var</string>
     <plurals name="home_live_many">
         <item quantity="one">Devam eden %1$d tesadüfün var</item>

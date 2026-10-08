@@ -273,6 +273,27 @@ fun ChatScreen(
 
         TesadufSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).safeDrawingPadding().padding(bottom = 80.dp))
 
+        // A fresh tesadüf: both avatars wave hello for a moment.
+        var meet by rememberSaveable { mutableStateOf<Boolean?>(null) }
+        LaunchedEffect(match?.id) {
+            val m = match ?: return@LaunchedEffect
+            if (meet != null) return@LaunchedEffect
+            val started = parseInstantMillis(m.startedAt) ?: 0L
+            if (m.status == MatchStatus.ACTIVE && serverNow() - started < MEET_WINDOW_MS) {
+                meet = true
+                delay(MEET_SHOW_MS)
+            }
+            meet = false
+        }
+        AnimatedVisibility(
+            visible = meet == true && match != null && myAvatar != null,
+            enter = fadeIn(tween(350)) + scaleIn(tween(450), initialScale = 0.85f),
+            exit = fadeOut(tween(400)),
+            modifier = Modifier.align(Alignment.Center),
+        ) {
+            if (match != null && myAvatar != null) MeetMoment(myAvatar, match.partner.avatar)
+        }
+
         // Overlays: sheets, dialogs, full-screen moments.
         TesadufSheet(visible = overlay == ChatOverlay.MENU, onDismiss = { overlay = null }) {
             MenuAction(TIcons.UserBlock, stringResource(R.string.menu_block), stringResource(R.string.menu_block_sub), TesadufColors.Danger) {
@@ -342,6 +363,30 @@ fun ChatScreen(
     }
 }
 
+private const val MEET_WINDOW_MS = 30_000L
+private const val MEET_SHOW_MS = 3_200L
+
+@Composable
+private fun MeetMoment(mine: String, partner: String) {
+    TesadufGlassCard(
+        Modifier.padding(24.dp),
+        fill = TesadufColors.Card.copy(alpha = 0.95f),
+        stroke = TesadufColors.Purple.copy(alpha = 0.4f),
+    ) {
+        Column(Modifier.padding(horizontal = 28.dp, vertical = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TesadufAvatar(mine, 92.dp, mood = AvatarMood.Wave, gaze = Offset(1f, 0f))
+                Icon(TIcons.Sparkles, contentDescription = null, tint = Color(0xFFFFC94A), modifier = Modifier.padding(horizontal = 6.dp).size(26.dp))
+                // Mirrored, so gaze +x means "look left" at the other avatar.
+                TesadufAvatar(partner, 92.dp, mood = AvatarMood.Wave, gaze = Offset(1f, 0f), modifier = Modifier.graphicsLayer { scaleX = -1f })
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(stringResource(R.string.meet_title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.meet_body), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
 /** Sheet action: tinted icon badge, title and a one-line explanation. */
 @Composable
 private fun MenuAction(icon: ImageVector, title: String, subtitle: String, accent: Color, onClick: () -> Unit) {
@@ -395,7 +440,7 @@ private fun ChatTopBar(
             TesadufAvatar(
                 match.partner.avatar, 46.dp,
                 interactive = true,
-                mood = if (match.status == MatchStatus.DESTINY && partnerMood == AvatarMood.Idle) AvatarMood.Idle else partnerMood,
+                mood = if (partnerTyping && partnerMood == AvatarMood.Idle) AvatarMood.Talking else partnerMood,
                 gaze = when {
                     partnerTyping -> Offset(-0.5f, 0.9f) // busy typing on their side
                     typingGaze != null -> Offset(typingGaze.x, 1f)

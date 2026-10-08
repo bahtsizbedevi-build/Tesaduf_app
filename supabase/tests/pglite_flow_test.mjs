@@ -263,9 +263,12 @@ await db.query("update public.matches set started_at = started_at - interval '2 
 const sty = await rpc("ali", "select public.ensure_profile()");
 check("3-day streak computed", sty.stats.best_streak === 3 && sty.stats.badges.includes("streak_3"), JSON.stringify(sty.stats));
 check("headphones unlocked after streak", (await rpc("ali", `select public.update_avatar('av_${aliColor}_6')`)).avatar === `av_${aliColor}_6`);
+check("glasses free", (await rpc("ali", `select public.update_avatar('av_${aliColor}_7')`)).avatar === `av_${aliColor}_7`);
+check("cat ears locked under 10 tesadüf", (await rpcError("ali", `select public.update_avatar('av_${aliColor}_8')`))?.includes("ACCESSORY_LOCKED"));
+check("halo locked under 100 messages", (await rpcError("ali", `select public.update_avatar('av_${aliColor}_9')`))?.includes("ACCESSORY_LOCKED"));
 check("colour cannot be changed", (await rpcError("ali", `select public.update_avatar('av_${otherColor}_2')`))?.includes("INVALID_AVATAR"));
 check("invalid avatar rejected", (await rpcError("ali", "select public.update_avatar('orb_9')"))?.includes("INVALID_AVATAR"));
-check("unknown accessory rejected", (await rpcError("ali", `select public.update_avatar('av_${aliColor}_7')`))?.includes("INVALID_AVATAR"));
+check("unknown accessory rejected", (await rpcError("ali", `select public.update_avatar('av_${aliColor}_0')`))?.includes("INVALID_AVATAR"));
 check("avatar cannot be set directly", (await rpcError("ali", "update public.profiles set avatar='av_1_1'"))?.includes("permission denied"));
 const st = await rpc("ali", "select public.ensure_profile()");
 check("stats count tesadüfs", st.stats.tesaduf_count >= 3, JSON.stringify(st.stats));
