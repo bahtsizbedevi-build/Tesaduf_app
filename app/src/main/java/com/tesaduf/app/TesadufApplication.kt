@@ -9,7 +9,9 @@ import com.tesaduf.app.data.SessionManager
 import com.tesaduf.app.data.SupabaseConfig
 import com.tesaduf.app.data.TesadufApi
 import com.tesaduf.app.network.ServerClock
+import com.tesaduf.app.notifications.Push
 import com.tesaduf.app.notifications.Reminders
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.tesaduf.app.network.createHttpClient
 import com.tesaduf.app.repository.TesadufRepository
 import com.tesaduf.app.ui.design.SoundFx
@@ -27,6 +29,13 @@ class AppContainer(app: Application) {
     val soundFx = SoundFx(app, preferences)
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     val networkMonitor = NetworkMonitor(app)
+
+    /** Chat currently on screen (no push notification for it). */
+    @Volatile
+    var activeChatId: String? = null
+
+    /** Chat to open from a tapped notification. */
+    val pendingChatId = MutableStateFlow<String?>(null)
     val repository = TesadufRepository(
         api = TesadufApi(http, config, session, clock),
         realtime = RealtimeClient(http, config, session),
@@ -45,6 +54,7 @@ class TesadufApplication : Application() {
         super.onCreate()
         container = AppContainer(this)
         Reminders.createChannel(this)
+        Push.createChannel(this)
         Reminders.schedule(this)
     }
 }

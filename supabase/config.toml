@@ -43,3 +43,5 @@ verify_jwt = false
 verify_jwt = false
 [functions.admin]
 verify_jwt = false
+[functions.push-token]
+verify_jwt = false

@@ -122,6 +122,13 @@ class TesadufApi(
             JsonElement.serializer(),
         ).ignoreValue()
 
+    suspend fun pushToken(token: String, register: Boolean): Outcome<Unit> =
+        call(
+            "push-token",
+            buildJsonObject { put("action", if (register) "register" else "unregister"); put("token", token) },
+            JsonElement.serializer(),
+        ).ignoreValue()
+
     suspend fun myChats(limit: Int = 50): Outcome<List<ChatSummary>> =
         call("my-chats", buildJsonObject { put("limit", limit) }, ListSerializer(ChatSummary.serializer()))
 

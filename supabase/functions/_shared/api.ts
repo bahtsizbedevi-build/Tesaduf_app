@@ -39,6 +39,7 @@ const rpcErrorStatus: Record<string, number> = {
   INVALID_REACTION: 400,
   INVALID_STATUS: 400,
   FORBIDDEN: 403,
+  INVALID_TOKEN: 400,
   ACCESSORY_LOCKED: 409,
   NOT_FOUND: 404,
 };

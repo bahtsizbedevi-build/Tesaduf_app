@@ -246,6 +246,10 @@
     <string name="notifications_reminders_body">Birkaç gün uğramazsan, gündüz saatlerinde nazik bir hatırlatma.</string>
     <string name="notifications_permission_denied">Bildirim izni kapalı. Telefon ayarlarından TESADÜF için bildirimlere izin verebilirsin.</string>
     <string name="notif_channel_reminders">Hatırlatmalar</string>
+    <string name="notif_channel_messages">Mesajlar</string>
+    <string name="notif_channel_messages_desc">Tesadüflerinden gelen yeni mesajlar</string>
+    <string name="notif_message_title">%1$s sana yazdı</string>
+    <string name="notif_message_hidden">Yeni bir mesajın var.</string>
     <string name="notif_channel_reminders_desc">Bir süre uğramadığında küçük hatırlatmalar</string>
     <string name="toggle_on">Açık</string>
     <string name="toggle_off">Kapalı</string>

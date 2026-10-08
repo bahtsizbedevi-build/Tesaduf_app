@@ -16,7 +16,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
+import androidx.lifecycle.compose.LifecycleStartEffect
+import com.tesaduf.app.notifications.Push
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -77,6 +81,19 @@ fun TesadufNavHost(container: AppContainer, navController: NavHostController = r
     val currentRoute = backStack?.destination?.route
     val session by repository.session.collectAsStateWithLifecycle()
     val haptics by prefs.haptics.collectAsStateWithLifecycle()
+
+    // Register for pushes once the anonymous session exists.
+    val ready = session is SessionState.Ready
+    LaunchedEffect(ready) { if (ready) repository.registerPushToken() }
+
+    // Open the chat from a tapped notification once we are past splash/onboarding.
+    val pendingChat by container.pendingChatId.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingChat, currentRoute, ready) {
+        val id = pendingChat ?: return@LaunchedEffect
+        if (!ready || currentRoute == null || currentRoute in setOf(Routes.SPLASH, Routes.ONBOARDING, Routes.PROFILE_SETUP)) return@LaunchedEffect
+        container.pendingChatId.value = null
+        navController.navigate(Routes.chat(id)) { launchSingleTop = true }
+    }
 
     fun goToTab(route: String) {
         navController.navigate(route) {
@@ -196,6 +213,12 @@ fun TesadufNavHost(container: AppContainer, navController: NavHostController = r
                 arguments = listOf(navArgument("matchId") { type = NavType.StringType }),
             ) { entry ->
                 val matchId = entry.arguments?.getString("matchId").orEmpty()
+                val context = LocalContext.current
+                LifecycleStartEffect(matchId) {
+                    container.activeChatId = matchId
+                    Push.cancelFor(context, matchId)
+                    onStopOrDispose { if (container.activeChatId == matchId) container.activeChatId = null }
+                }
                 val icebreakers = stringArrayResource(R.array.icebreakers).size
                 val vm: ChatViewModel = viewModel(factory = viewModelFactory { initializer { ChatViewModel(matchId, repository, icebreakers) } })
                 ChatScreen(

@@ -1,5 +1,6 @@
 package com.tesaduf.app
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,6 +11,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.runtime.CompositionLocalProvider
 import com.tesaduf.app.navigation.TesadufNavHost
 import com.tesaduf.app.ui.design.LocalSoundFx
+import com.tesaduf.app.notifications.Push
 import com.tesaduf.app.notifications.Reminders
 import com.tesaduf.app.ui.theme.TesadufTheme
 
@@ -23,6 +25,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         val container = (application as TesadufApplication).container
+        handleOpenChat(intent)
         setContent {
             TesadufTheme {
                 CompositionLocalProvider(LocalSoundFx provides container.soundFx) {
@@ -34,6 +37,17 @@ class MainActivity : ComponentActivity() {
         if (BuildConfig.DEBUG && intent?.getBooleanExtra(EXTRA_DEBUG_REMINDER, false) == true) {
             Reminders.fireNowForDebug(this)
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleOpenChat(intent)
+    }
+
+    private fun handleOpenChat(intent: Intent?) {
+        val matchId = intent?.getStringExtra(Push.EXTRA_MATCH_ID) ?: return
+        intent.removeExtra(Push.EXTRA_MATCH_ID)
+        (application as TesadufApplication).container.pendingChatId.value = matchId
     }
 
     override fun onResume() {

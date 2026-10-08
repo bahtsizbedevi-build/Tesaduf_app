@@ -24,6 +24,7 @@ import com.tesaduf.app.model.UnblockResult
 import com.tesaduf.app.network.AppError
 import com.tesaduf.app.network.Outcome
 import com.tesaduf.app.network.ServerClock
+import com.tesaduf.app.notifications.Push
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -101,8 +102,17 @@ class TesadufRepository(
         return result
     }
 
+    /** Registers this device for message pushes (fire-and-forget, idempotent). */
+    fun registerPushToken(token: String? = null) {
+        appScope.launch {
+            val t = token ?: Push.currentToken() ?: return@launch
+            api.pushToken(t, register = true)
+        }
+    }
+
     /** Forgets the anonymous identity on this device; a new one is created on next start. */
     suspend fun signOut() {
+        Push.currentToken()?.let { api.pushToken(it, register = false) }
         sessionManager.signOut()
         preferences.onboardingDone = false
         bootstrapJob?.cancel()

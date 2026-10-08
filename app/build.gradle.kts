@@ -7,6 +7,11 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// FCM: only when the Firebase config is present (it is git-ignored).
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 // Supabase client config comes from <root>/supabase.properties (git-ignored) or
 // -P / environment. Only the public anon/publishable key belongs here — never the
 // service_role key.
@@ -96,6 +101,8 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.lucide.icons)
     implementation(libs.work.runtime)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
     implementation(libs.compose.foundation)
     debugImplementation(libs.compose.ui.tooling)
 
