@@ -37,6 +37,15 @@ enum class MatchStatus { ACTIVE, DECIDING, DESTINY, ENDED, UNKNOWN;
 
 enum class Decision(val wire: String) { CONTINUE("continue"), END("end") }
 
+/** Reactions the recipient can put on a message (rendered with Lucide icons, no emoji). */
+enum class Reaction(val wire: String) {
+    HEART("heart"), LAUGH("laugh"), WOW("wow"), SAD("sad"), FIRE("fire");
+
+    companion object {
+        fun from(raw: String?): Reaction? = entries.firstOrNull { it.wire == raw }
+    }
+}
+
 enum class ReportReason(val wire: String) {
     SPAM("spam"), INSULT("insult"), HARASSMENT("harassment"), INAPPROPRIATE("inappropriate"), OTHER("other")
 }
@@ -55,6 +64,8 @@ data class Match(
     @SerialName("ended_by_me") val endedByMe: Boolean = false,
     @SerialName("my_decision") val myDecision: String? = null,
     @SerialName("partner_decided") val partnerDecided: Boolean = false,
+    /** Highest message id the partner has seen (read receipts). */
+    @SerialName("partner_last_read") val partnerLastRead: Long = 0,
     val partner: Partner,
     @SerialName("server_time") val serverTime: String? = null,
 ) {
@@ -90,6 +101,9 @@ data class BlockedUser(
 data class UnblockResult(val unblocked: Boolean = false)
 
 @Serializable
+data class ReadResult(@SerialName("last_read") val lastRead: Long = 0)
+
+@Serializable
 data class MatchmakerResult(
     val state: String,
     val match: Match? = null,
@@ -105,6 +119,8 @@ data class ChatMessage(
     val mine: Boolean,
     val body: String,
     @SerialName("created_at") val createdAt: String,
+    val reaction: String? = null,
+    val flagged: Boolean = false,
 )
 
 @Serializable

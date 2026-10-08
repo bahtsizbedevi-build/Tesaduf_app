@@ -95,8 +95,7 @@
     <string name="chat_reconnecting">Yeniden bağlanıyor…</string>
     <string name="chat_input_hint">Mesaj yaz…</string>
     <string name="chat_send">Gönder</string>
-        <string name="chat_empty_title">Merhaba de</string>
-    <string name="chat_empty_sub">Karşındaki kişi de senin gibi anonim. Saygılı ol, keyfini çıkar.</string>
+        <string name="chat_empty_sub">Karşındaki kişi de senin gibi anonim. Saygılı ol, keyfini çıkar.</string>
     <string name="chat_sending">Gönderiliyor</string>
     <string name="chat_failed">Gönderilemedi · Tekrar dene</string>
     <string name="chat_timer_destiny">Kader</string>
@@ -130,6 +129,33 @@
     <string name="report_other">Diğer</string>
     <string name="report_done">Bildirimin alındı. Kullanıcı engellendi.</string>
 
+    <string name="chat_typing">yazıyor…</string>
+    <string name="chat_seen">Görüldü</string>
+    <string name="chat_delivered">Gönderildi</string>
+    <string name="chat_flagged">Bu mesaj uygunsuz ifadeler içerebilir. Görmek için dokun.</string>
+    <string name="chat_react_hint">Tepki vermek için mesaja basılı tut</string>
+    <string name="icebreaker_label">Buz kırıcı</string>
+    <string name="icebreaker_tap">Dokun, mesaj kutusuna eklensin</string>
+    <string name="reaction_heart">Kalp</string>
+    <string name="reaction_laugh">Kahkaha</string>
+    <string name="reaction_wow">Vay</string>
+    <string name="reaction_sad">Üzgün</string>
+    <string name="reaction_fire">Ateş</string>
+    <string-array name="icebreakers">
+        <item>Bugün seni ne gülümsetti?</item>
+        <item>Hiç gitmediğin ama hayalini kurduğun bir yer?</item>
+        <item>Son zamanlarda dinlediğin en iyi şarkı ne?</item>
+        <item>Süper gücün olsaydı ne olurdu?</item>
+        <item>Hayatında yaşadığın en güzel tesadüf neydi?</item>
+        <item>Kendini üç kelimeyle anlat.</item>
+        <item>Bir günlüğüne herhangi biri olabilseydin kim olurdun?</item>
+        <item>En sevdiğin mevsim hangisi, neden?</item>
+        <item>Gece kuşu musun, sabahçı mı?</item>
+        <item>Tekrar tekrar izleyebileceğin bir film?</item>
+        <item>Bu hafta öğrendiğin ilginç bir şey?</item>
+        <item>Kahve mi çay mı? Savun bakalım.</item>
+    </string-array>
+
     <!-- Session end / destiny -->
     <string name="decision_title">Tesadüfünüz sona erdi.</string>
     <string name="decision_body">Bu sohbeti devam ettirmek ister misin?</string>
@@ -159,32 +185,19 @@
 
     <!-- Chats tab -->
     <string name="chats_title">Sohbetler</string>
-    <string name="chats_empty_title">Henüz devam eden bir sohbetin yok.</string>
-    <string name="chats_empty_sub">Kader olan tesadüflerin burada seni bekler.</string>
+    <string name="chats_empty_title">Henüz bir sohbetin yok.</string>
+    <string name="chats_empty_sub">Devam eden tesadüflerin ve Kader sohbetlerin burada görünür.</string>
     <string name="chats_no_messages">Henüz mesaj yok</string>
 
-    <!-- History -->
-    <string name="history_title">Geçmiş Tesadüfler</string>
-    <string name="filter_all">Tümü</string>
-    <string name="filter_destiny">Kader</string>
-    <string name="filter_completed">Tamamlanan</string>
     <string name="badge_destiny">Kader</string>
-    <string name="badge_completed">Tamamlandı</string>
     <string name="badge_active">Aktif</string>
     <string name="badge_deciding">Karar bekleniyor</string>
-    <string name="duration_minutes">%1$d dk</string>
-    <string name="history_ongoing">devam ediyor</string>
-    <string name="history_empty_title">Henüz bir tesadüf yaşamadın.</string>
-    <string name="history_empty_sub">İlk tesadüfün burada görünecek.</string>
-    <string name="history_empty_action">İlk Tesadüfü Başlat</string>
-    <string name="history_filter_empty">Bu filtrede henüz bir tesadüf yok.</string>
     <string name="preview_you">Sen</string>
 
     <!-- Settings / profile -->
     <string name="settings_title">Profil</string>
     <string name="anonymous_user">Anonim Kullanıcı</string>
     <string name="settings_change_avatar">Avatarı Değiştir</string>
-    <string name="settings_history">Geçmiş Tesadüfler</string>
     <string name="settings_blocked">Engellenenler</string>
     <string name="settings_notifications">Bildirimler</string>
     <string name="settings_about">Hakkında</string>

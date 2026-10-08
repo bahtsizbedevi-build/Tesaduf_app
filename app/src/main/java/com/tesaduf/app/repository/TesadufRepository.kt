@@ -17,6 +17,7 @@ import com.tesaduf.app.model.MatchmakerResult
 import com.tesaduf.app.model.MessagesPage
 import com.tesaduf.app.model.Profile
 import com.tesaduf.app.model.ProfileStats
+import com.tesaduf.app.model.Reaction
 import com.tesaduf.app.model.ReportReason
 import com.tesaduf.app.model.SafetyActionResult
 import com.tesaduf.app.model.UnblockResult
@@ -122,6 +123,9 @@ class TesadufRepository(
         api.report(matchId, reason)
 
     suspend fun myChats(): Outcome<List<ChatSummary>> = api.myChats()
+    suspend fun markRead(matchId: String, lastId: Long) = api.markRead(matchId, lastId)
+    suspend fun react(messageId: Long, reaction: Reaction?): Outcome<ChatMessage> = api.react(messageId, reaction)
+    fun sendTyping(matchId: String) = realtime.sendTyping(matchId)
     suspend fun blockedUsers(): Outcome<List<BlockedUser>> = api.blockedUsers()
     suspend fun unblock(blockId: Long): Outcome<UnblockResult> = api.unblock(blockId)
 

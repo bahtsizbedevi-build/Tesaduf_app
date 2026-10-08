@@ -9,6 +9,7 @@ import com.tesaduf.app.model.ChatMessage
 import com.tesaduf.app.model.Decision
 import com.tesaduf.app.model.Match
 import com.tesaduf.app.model.MatchStatus
+import com.tesaduf.app.model.Reaction
 import com.tesaduf.app.model.ReportReason
 import com.tesaduf.app.model.SafetyActionResult
 import com.tesaduf.app.network.AppError
@@ -31,10 +32,14 @@ enum class SendState { SENT, SENDING, FAILED }
 data class UiMessage(
     /** Stable list key: the client id, identical before and after the server confirms. */
     val key: String,
+    val serverId: Long?,
     val body: String,
     val mine: Boolean,
     val createdAt: String?,
     val state: SendState,
+    val reaction: Reaction? = null,
+    /** Flagged by the server's language filter: shown hidden until tapped (recipient only). */
+    val flagged: Boolean = false,
 )
 
 data class ChatUiState(
@@ -47,10 +52,14 @@ data class ChatUiState(
     val decisionInFlight: Boolean = false,
     val actionInFlight: Boolean = false,
     @param:StringRes val notice: Int? = null,
-    /** Both sides chose to continue while this screen was open: show the Destiny moment once. */
+    /** Both sides chose to continue while this screen was open: show the Kader moment once. */
     val celebrateDestiny: Boolean = false,
     /** The user just blocked the partner: show the confirmation screen. */
     val showBlockedConfirmation: Boolean = false,
+    /** The partner is typing right now (realtime broadcast). */
+    val partnerTyping: Boolean = false,
+    /** Same ice-breaker for both sides of a match (derived from the match id). */
+    val icebreakerIndex: Int = 0,
 )
 
 /**
@@ -61,25 +70,34 @@ data class ChatUiState(
 class ChatViewModel(
     private val matchId: String,
     private val repository: TesadufRepository,
+    icebreakerCount: Int,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(ChatUiState())
+    private val _state = MutableStateFlow(
+        ChatUiState(icebreakerIndex = Math.floorMod(matchId.hashCode(), icebreakerCount.coerceAtLeast(1))),
+    )
     val state: StateFlow<ChatUiState> = _state.asStateFlow()
 
     private val serverMessages = sortedMapOf<Long, ChatMessage>()
     private val pending = linkedMapOf<String, PendingMessage>()
     private var lastServerId = 0L
+    private var lastMarkedRead = 0L
+    private var visible = false
+    private var lastTypingSentAt = 0L
+    private var typingClearJob: Job? = null
 
-    private val syncRequests = Channel<Unit>(Channel.CONFLATED)
+    /** true = also re-read the latest window (reactions changed on existing messages). */
+    private val syncRequests = Channel<Boolean>(Channel.CONFLATED)
     private val jobs = mutableListOf<Job>()
 
     private data class PendingMessage(val body: String, val failed: Boolean)
 
     init {
-        viewModelScope.launch { for (request in syncRequests) sync() }
+        viewModelScope.launch { for (window in syncRequests) sync(window) }
     }
 
     fun onVisible() {
+        visible = true
         if (jobs.isNotEmpty() || isEnded()) return
         requestSync()
         jobs += viewModelScope.launch {
@@ -90,15 +108,19 @@ class ChatViewModel(
                         requestSync()
                     }
                     RealtimeEvent.Changed -> requestSync()
+                    RealtimeEvent.MessagesUpdated -> requestSync(window = true)
+                    RealtimeEvent.Typing -> showPartnerTyping()
                     RealtimeEvent.Disconnected -> _state.update { it.copy(realtimeConnected = false) }
                 }
             }
         }
         // Safety-net polling: slow when realtime pushes changes, faster otherwise.
         jobs += viewModelScope.launch {
+            var tick = 0
             while (isActive) {
                 delay(pollIntervalMs())
-                requestSync()
+                // Every few polls re-read the window so reactions show up even without realtime.
+                requestSync(window = ++tick % 4 == 0)
             }
         }
         jobs += viewModelScope.launch {
@@ -124,9 +146,10 @@ class ChatViewModel(
     }
 
     fun onHidden() {
+        visible = false
         jobs.forEach { it.cancel() }
         jobs.clear()
-        _state.update { it.copy(realtimeConnected = false) }
+        _state.update { it.copy(realtimeConnected = false, partnerTyping = false) }
     }
 
     fun onConnectivityRestored() {
@@ -144,19 +167,21 @@ class ChatViewModel(
         }
     }
 
-    private fun requestSync() {
-        syncRequests.trySend(Unit)
+    private fun requestSync(window: Boolean = false) {
+        syncRequests.trySend(window)
     }
 
-    private suspend fun sync() {
+    private suspend fun sync(window: Boolean) {
         if (_state.value.fatalError != null) return
-        when (val result = repository.messages(matchId, lastServerId)) {
+        val after = if (window) 0L else lastServerId
+        when (val result = repository.messages(matchId, after)) {
             is Outcome.Success -> {
                 val page = result.value
                 applyMatch(page.match)
                 mergeServerMessages(page.messages)
                 _state.update { it.copy(loading = false, error = null) }
-                if (page.messages.size >= PAGE_SIZE) requestSync()
+                if (!window && page.messages.size >= PAGE_SIZE) requestSync()
+                markReadIfVisible()
             }
             is Outcome.Failure -> {
                 if (result.error is AppError.MatchNotFound) {
@@ -169,6 +194,15 @@ class ChatViewModel(
         }
     }
 
+    /** Read receipt for the newest partner message while the chat is on screen. */
+    private fun markReadIfVisible() {
+        if (!visible) return
+        val newestPartner = serverMessages.values.lastOrNull { !it.mine }?.id ?: return
+        if (newestPartner <= lastMarkedRead) return
+        lastMarkedRead = newestPartner
+        viewModelScope.launch { repository.markRead(matchId, newestPartner) }
+    }
+
     private fun mergeServerMessages(messages: List<ChatMessage>) {
         if (messages.isEmpty()) return
         for (m in messages) {
@@ -176,15 +210,19 @@ class ChatViewModel(
             pending.remove(m.clientId)
             if (m.id > lastServerId) lastServerId = m.id
         }
+        if (messages.any { !it.mine }) _state.update { it.copy(partnerTyping = false) }
         publishMessages()
     }
 
     private fun publishMessages() {
         val confirmed = serverMessages.values.map {
-            UiMessage(it.clientId, it.body, it.mine, it.createdAt, SendState.SENT)
+            UiMessage(
+                key = it.clientId, serverId = it.id, body = it.body, mine = it.mine, createdAt = it.createdAt,
+                state = SendState.SENT, reaction = Reaction.from(it.reaction), flagged = it.flagged && !it.mine,
+            )
         }
         val local = pending.map { (clientId, p) ->
-            UiMessage(clientId, p.body, true, null, if (p.failed) SendState.FAILED else SendState.SENDING)
+            UiMessage(clientId, null, p.body, true, null, if (p.failed) SendState.FAILED else SendState.SENDING)
         }
         _state.update { it.copy(messages = confirmed + local) }
     }
@@ -211,6 +249,23 @@ class ChatViewModel(
     }
 
     private fun isEnded() = _state.value.match?.status == MatchStatus.ENDED || _state.value.fatalError != null
+
+    private fun showPartnerTyping() {
+        _state.update { it.copy(partnerTyping = true) }
+        typingClearJob?.cancel()
+        typingClearJob = viewModelScope.launch {
+            delay(TYPING_VISIBLE_MS)
+            _state.update { it.copy(partnerTyping = false) }
+        }
+    }
+
+    /** Called on every keystroke; broadcasts at most once per [TYPING_THROTTLE_MS]. */
+    fun onTyping() {
+        val now = System.currentTimeMillis()
+        if (now - lastTypingSentAt < TYPING_THROTTLE_MS) return
+        lastTypingSentAt = now
+        repository.sendTyping(matchId)
+    }
 
     fun send(text: String): Boolean {
         val body = text.trim()
@@ -251,6 +306,29 @@ class ChatViewModel(
                         _state.update { it.copy(error = result.error) }
                         requestSync()
                     }
+                }
+            }
+        }
+    }
+
+    /** Toggle a reaction on the partner's message (optimistic, reverted on failure). */
+    fun react(message: UiMessage, reaction: Reaction) {
+        val id = message.serverId ?: return
+        if (message.mine) return
+        val old = serverMessages[id] ?: return
+        val newValue = if (Reaction.from(old.reaction) == reaction) null else reaction
+        serverMessages[id] = old.copy(reaction = newValue?.wire)
+        publishMessages()
+        viewModelScope.launch {
+            when (val result = repository.react(id, newValue)) {
+                is Outcome.Success -> {
+                    serverMessages[id] = result.value
+                    publishMessages()
+                }
+                is Outcome.Failure -> {
+                    serverMessages[id] = old
+                    publishMessages()
+                    _state.update { it.copy(error = result.error) }
                 }
             }
         }
@@ -328,5 +406,7 @@ class ChatViewModel(
         private const val POLL_WITH_REALTIME_MS = 20_000L
         private const val HEARTBEAT_MS = 20_000L
         private const val EXPIRY_CHECK_MS = 1_500L
+        private const val TYPING_THROTTLE_MS = 1_500L
+        private const val TYPING_VISIBLE_MS = 3_500L
     }
 }

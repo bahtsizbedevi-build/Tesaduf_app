@@ -4,6 +4,7 @@ import com.tesaduf.app.network.TesadufJson
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
@@ -26,20 +27,32 @@ sealed interface RealtimeEvent {
     data object Joined : RealtimeEvent
     /** A message was inserted or the match row changed — fetch the delta. */
     data object Changed : RealtimeEvent
+    /** Existing messages changed (reactions) — re-read the latest window. */
+    data object MessagesUpdated : RealtimeEvent
+    /** The partner is typing (ephemeral broadcast, carries no content). */
+    data object Typing : RealtimeEvent
     data object Disconnected : RealtimeEvent
 }
 
 /**
- * Minimal Supabase Realtime (Phoenix protocol v1) client used purely as a "something
- * changed" signal for one match. Data is always fetched through the Edge Functions, so
- * if Realtime is unavailable the app keeps working on (slower) polling.
- * Row Level Security applies: only participants receive events.
+ * Minimal Supabase Realtime (Phoenix protocol v1) client for one match:
+ * - postgres_changes as a "something changed" signal (data is always fetched through
+ *   the Edge Functions, RLS applies, so only participants receive events);
+ * - a broadcast "typing" ping between the two phones (no message content).
+ * If Realtime is unavailable the app keeps working on (slower) polling.
  */
 class RealtimeClient(
     private val http: OkHttpClient,
     private val config: SupabaseConfig,
     private val session: SessionManager,
 ) {
+    private val typingOut = MutableSharedFlow<String>(extraBufferCapacity = 4)
+
+    /** Fire-and-forget typing ping for [matchId]; dropped if not connected. */
+    fun sendTyping(matchId: String) {
+        typingOut.tryEmit(matchId)
+    }
+
     fun matchEvents(matchId: String): Flow<RealtimeEvent> = flow {
         var attempt = 0
         while (true) {
@@ -84,6 +97,7 @@ class RealtimeClient(
                                 putJsonObject("presence") { put("key", "") }
                                 put("postgres_changes", buildJsonArray {
                                     add(change("INSERT", "messages", "match_id=eq.$matchId"))
+                                    add(change("UPDATE", "messages", "match_id=eq.$matchId"))
                                     add(change("UPDATE", "matches", "id=eq.$matchId"))
                                 })
                             }
@@ -95,14 +109,23 @@ class RealtimeClient(
             override fun onMessage(webSocket: WebSocket, text: String) {
                 val message = runCatching { TesadufJson.parseToJsonElement(text).jsonObject }.getOrNull() ?: return
                 if (message["topic"]?.jsonPrimitive?.content != topic) return
+                val payload = message["payload"]?.jsonObject
                 when (message["event"]?.jsonPrimitive?.content) {
                     "phx_reply" -> {
-                        val status = message["payload"]?.jsonObject?.get("status")?.jsonPrimitive?.content
+                        val status = payload?.get("status")?.jsonPrimitive?.content
                         if (status == "ok" && message["ref"]?.jsonPrimitive?.content == "1") {
                             trySend(RealtimeEvent.Joined)
                         }
                     }
-                    "postgres_changes" -> trySend(RealtimeEvent.Changed)
+                    "postgres_changes" -> {
+                        val data = payload?.get("data")?.jsonObject
+                        val table = data?.get("table")?.jsonPrimitive?.content
+                        val type = data?.get("type")?.jsonPrimitive?.content
+                        trySend(if (table == "messages" && type == "UPDATE") RealtimeEvent.MessagesUpdated else RealtimeEvent.Changed)
+                    }
+                    "broadcast" -> {
+                        if (payload?.get("event")?.jsonPrimitive?.content == TYPING_EVENT) trySend(RealtimeEvent.Typing)
+                    }
                     "phx_error", "phx_close" -> webSocket.close(NORMAL_CLOSE, null)
                 }
             }
@@ -136,9 +159,27 @@ class RealtimeClient(
                 if (!sent) break
             }
         }
+        val typing = launch {
+            typingOut.collect { id ->
+                if (id != matchId) return@collect
+                socket.send(
+                    buildJsonObject {
+                        put("topic", topic)
+                        put("event", "broadcast")
+                        put("ref", nextRef())
+                        putJsonObject("payload") {
+                            put("type", "broadcast")
+                            put("event", TYPING_EVENT)
+                            put("payload", JsonObject(emptyMap()))
+                        }
+                    }.toString(),
+                )
+            }
+        }
 
         awaitClose {
             heartbeat.cancel()
+            typing.cancel()
             socket.close(NORMAL_CLOSE, null)
         }
     }
@@ -155,5 +196,6 @@ class RealtimeClient(
         const val HEARTBEAT_MS = 25_000L
         const val BASE_BACKOFF_MS = 1_000L
         const val MAX_BACKOFF_MS = 30_000L
+        const val TYPING_EVENT = "typing"
     }
 }

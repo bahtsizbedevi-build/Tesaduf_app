@@ -37,3 +37,7 @@ verify_jwt = false
 verify_jwt = false
 [functions.blocked-users]
 verify_jwt = false
+[functions.mark-read]
+verify_jwt = false
+[functions.react-message]
+verify_jwt = false

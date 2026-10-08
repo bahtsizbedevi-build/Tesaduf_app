@@ -32,7 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tesaduf.app.R
 import com.tesaduf.app.model.ChatSummary
 import com.tesaduf.app.model.MatchStatus
-import com.tesaduf.app.ui.design.HeartsIllustration
+import com.tesaduf.app.ui.design.ChatBubblesIllustration
 import com.tesaduf.app.ui.design.TIcons
 import com.tesaduf.app.ui.design.TesadufAvatar
 import com.tesaduf.app.ui.design.TesadufBackground
@@ -45,7 +45,6 @@ import com.tesaduf.app.ui.design.TesadufGlassCard
 import com.tesaduf.app.ui.design.TesadufInlineMessage
 import com.tesaduf.app.ui.design.TesadufSkeletonRow
 import com.tesaduf.app.ui.design.TesadufTopBar
-import com.tesaduf.app.ui.history.HistoryViewModel
 import com.tesaduf.app.ui.home.BottomBarSpace
 import com.tesaduf.app.ui.theme.IdTextStyle
 import com.tesaduf.app.ui.theme.TesadufColors
@@ -56,7 +55,7 @@ import com.tesaduf.app.util.formatClock
  * every Kader chat that continues without a time limit.
  */
 @Composable
-fun ChatsScreen(viewModel: HistoryViewModel, serverNow: () -> Long, onOpen: (String) -> Unit, onStart: () -> Unit) {
+fun ChatsScreen(viewModel: ChatListViewModel, serverNow: () -> Long, onOpen: (String) -> Unit, onStart: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     LifecycleResumeEffect(viewModel) {
@@ -87,7 +86,7 @@ fun ChatsScreen(viewModel: HistoryViewModel, serverNow: () -> Long, onOpen: (Str
                 open.isEmpty() && state.error == null -> TesadufEmptyState(
                     title = stringResource(R.string.chats_empty_title),
                     body = stringResource(R.string.chats_empty_sub),
-                    illustration = { HeartsIllustration(Modifier.size(130.dp)) },
+                    illustration = { ChatBubblesIllustration(Modifier.size(140.dp)) },
                     actionLabel = stringResource(R.string.home_start),
                     onAction = onStart,
                     modifier = Modifier.fillMaxSize().padding(bottom = BottomBarSpace),

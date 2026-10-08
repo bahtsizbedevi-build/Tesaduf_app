@@ -3,6 +3,8 @@ package com.tesaduf.app.data
 import com.tesaduf.app.model.BlockedUser
 import com.tesaduf.app.model.BootstrapResult
 import com.tesaduf.app.model.Profile
+import com.tesaduf.app.model.Reaction
+import com.tesaduf.app.model.ReadResult
 import com.tesaduf.app.model.UnblockResult
 import com.tesaduf.app.model.ChatMessage
 import com.tesaduf.app.model.ChatSummary
@@ -98,6 +100,16 @@ class TesadufApi(
 
     suspend fun unblock(blockId: Long): Outcome<UnblockResult> =
         call("blocked-users", buildJsonObject { put("action", "unblock"); put("block_id", blockId) }, UnblockResult.serializer())
+
+    suspend fun markRead(matchId: String, lastId: Long): Outcome<ReadResult> =
+        call("mark-read", buildJsonObject { put("match_id", matchId); put("last_id", lastId) }, ReadResult.serializer())
+
+    suspend fun react(messageId: Long, reaction: Reaction?): Outcome<ChatMessage> =
+        call(
+            "react-message",
+            buildJsonObject { put("message_id", messageId); put("reaction", reaction?.wire) },
+            ChatMessage.serializer(),
+        )
 
     suspend fun myChats(limit: Int = 50): Outcome<List<ChatSummary>> =
         call("my-chats", buildJsonObject { put("limit", limit) }, ListSerializer(ChatSummary.serializer()))

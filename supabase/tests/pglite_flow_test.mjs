@@ -238,7 +238,8 @@ const m8 = await rpc("ece", "select public.find_match('text')");
 await shiftMatch(m8.match.id, "4 minutes");
 await db.query("update public.profiles set last_seen_at = now() - interval '4 minutes' where id = $1", [users.ece]);
 const e8 = await rpc("ali", "select public.heartbeat($1)", [m8.match.id]);
-check("silent partner => abandoned", e8.match.status === "ended" && e8.match.end_reason === "abandoned");
+check("bad connection never ends a tesadüf", e8.match.status === "active" && e8.match.partner.online === false);
+await rpc("ali", "select public.end_match($1)", [m8.match.id]);
 
 console.log("\n# History (my-chats)");
 const h = await rpc("ali", "select public.my_chats(30)");
@@ -267,6 +268,38 @@ check("unblock works", (await rpc("ece", "select public.unblock($1)", [bl[0].id]
 check("blocks list empty after unblock", (await rpc("ece", "select public.list_blocks()")).length === 0);
 check("new helper not callable",
   (await rpcError("ali", "select public._profile_stats(gen_random_uuid())"))?.includes("permission denied"));
+
+console.log("\n# Read receipts / reactions / offensive flag");
+await rpc("ali", "select public.cancel_matchmaking()");
+await rpc("ece", "select public.cancel_matchmaking()");
+await rpc("can", "select public.cancel_matchmaking()");
+const fresh = await newUser("fatma");
+await rpc("fatma", "select public.ensure_profile()");
+const ggId = await newUser("gul");
+await rpc("gul", "select public.ensure_profile()");
+await rpc("fatma", "select public.find_match('text')");
+const rr = await rpc("gul", "select public.find_match('text')");
+const rrId = rr.match.id;
+const m1r = await rpc("fatma", "select public.send_message($1,'Merhaba',$2)", [rrId, crypto.randomUUID()]);
+const bad = await rpc("fatma", "select public.send_message($1,'siktir git',$2)", [rrId, crypto.randomUUID()]);
+const ok2 = await rpc("fatma", "select public.send_message($1,'Sıkıldım biraz, siklet nedir?',$2)", [rrId, crypto.randomUUID()]);
+check("offensive message flagged", bad.flagged === true);
+check("normal message not flagged", m1r.flagged === false && ok2.flagged === false, JSON.stringify(ok2));
+check("partner_last_read starts at 0", (await rpc("fatma", "select public.get_match($1)", [rrId])).partner_last_read === 0);
+await rpc("gul", "select public.mark_read($1,$2)", [rrId, bad.id]);
+check("read receipt visible to sender", (await rpc("fatma", "select public.get_match($1)", [rrId])).partner_last_read === bad.id);
+await rpc("gul", "select public.mark_read($1,$2)", [rrId, 1]);
+check("read receipt never moves backwards", (await rpc("fatma", "select public.get_match($1)", [rrId])).partner_last_read === bad.id);
+check("read receipt capped at newest", (await rpc("gul", "select public.mark_read($1,$2)", [rrId, 99999999])).last_read === ok2.id);
+const rx = await rpc("gul", "select public.react_message($1,'heart')", [m1r.id]);
+check("recipient can react", rx.reaction === "heart");
+check("sender cannot react to own message", (await rpcError("fatma", "select public.react_message($1,'heart')", [m1r.id]))?.includes("INVALID_REACTION"));
+check("outsider cannot react", (await rpcError("ali", "select public.react_message($1,'heart')", [m1r.id]))?.includes("MATCH_NOT_FOUND"));
+check("invalid reaction rejected", (await rpcError("gul", "select public.react_message($1,'poop')", [m1r.id]))?.includes("INVALID_REACTION"));
+const lst = await rpc("fatma", "select public.list_messages($1,0,50)", [rrId]);
+check("reaction visible in list", lst.messages.find((x) => x.id === m1r.id)?.reaction === "heart");
+check("reaction can be cleared", (await rpc("gul", "select public.react_message($1,null)", [m1r.id])).reaction === null);
+void fresh; void ggId;
 
 console.log("\n# Suspended account");
 await db.query("update public.profiles set status='suspended' where id=$1", [users.deniz]);

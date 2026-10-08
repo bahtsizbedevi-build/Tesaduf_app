@@ -200,6 +200,31 @@ fun FloatingHearts(modifier: Modifier = Modifier, count: Int = 16) {
     )
 }
 
+/** Two neon speech-bubble outlines (neutral "conversations" illustration). */
+@Composable
+fun ChatBubblesIllustration(modifier: Modifier = Modifier) {
+    Box(
+        modifier.drawBehind {
+            val w = size.width
+            val h = size.height
+            softGlow(TesadufColors.Cyan, Offset(w * 0.38f, h * 0.45f), w * 0.45f, 0.16f)
+            softGlow(TesadufColors.Purple, Offset(w * 0.62f, h * 0.6f), w * 0.45f, 0.16f)
+            val stroke = 3.dp.toPx()
+            fun bubble(left: Float, top: Float, bw: Float, bh: Float, tailRight: Boolean) = Path().apply {
+                val r = bh * 0.38f
+                addRoundRect(androidx.compose.ui.geometry.RoundRect(left, top, left + bw, top + bh, r, r))
+                val tx = if (tailRight) left + bw * 0.78f else left + bw * 0.22f
+                moveTo(tx - bw * 0.07f, top + bh - 1f)
+                lineTo(tx + (if (tailRight) bw * 0.1f else -bw * 0.1f), top + bh + bh * 0.28f)
+                lineTo(tx + bw * 0.07f, top + bh - 1f)
+            }
+            neonStroke(bubble(w * 0.08f, h * 0.18f, w * 0.56f, h * 0.36f, tailRight = false), Brush.linearGradient(listOf(TesadufColors.Cyan, TesadufColors.Blue)), stroke)
+            neonStroke(bubble(w * 0.36f, h * 0.5f, w * 0.56f, h * 0.3f, tailRight = true), Brush.linearGradient(listOf(TesadufColors.Purple, TesadufColors.Pink)), stroke)
+            for (k in 0..2) drawCircle(TesadufColors.Cyan, 3.dp.toPx(), Offset(w * (0.26f + k * 0.1f), h * 0.36f))
+        },
+    )
+}
+
 /** Red "blocked" sign. */
 @Composable
 fun BlockIllustration(modifier: Modifier = Modifier) {

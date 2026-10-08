@@ -2,9 +2,13 @@ package com.tesaduf.app.ui.matchmaking
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -95,8 +100,20 @@ fun MatchmakingScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        CinematicScene(director, Modifier.fillMaxSize())
+    // Scene on top, controls in their own area below: cards never cover the story's
+    // caption / progress line; when a card appears the scene smoothly makes room.
+    Box(Modifier.fillMaxSize().background(SceneBottom)) {
+        Column(Modifier.fillMaxSize()) {
+            CinematicScene(director, Modifier.weight(1f).fillMaxWidth())
+            BottomControls(
+                visible = !found,
+                state = state,
+                online = online,
+                viewModel = viewModel,
+                cancel = cancel,
+                onHome = onHome,
+            )
+        }
 
         // Quiet status on top: elapsed time and how many others are searching.
         AnimatedVisibility(!found, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter)) {
@@ -113,45 +130,59 @@ fun MatchmakingScreen(
             }
         }
 
-        AnimatedVisibility(!found, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
-            Column(
-                Modifier
-                    .safeDrawingPadding()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
-                    .widthIn(max = 480.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                val error: AppError? = if (!online) AppError.NoInternet else state.error
-                AnimatedVisibility(error != null, enter = fadeIn(), exit = fadeOut()) {
-                    error?.let { TesadufInlineMessage(it, Modifier.padding(bottom = 12.dp), onRetry = viewModel::retryNow) }
-                }
-                AnimatedVisibility(state.timedOut, enter = fadeIn(), exit = fadeOut()) {
-                    TesadufGlassCard(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                        Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(stringResource(R.string.mm_timeout_title), style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(6.dp))
-                            Text(stringResource(R.string.mm_timeout_body), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(14.dp))
-                            TesadufButton(stringResource(R.string.mm_retry), viewModel::restart, Modifier.fillMaxWidth())
-                            Spacer(Modifier.height(8.dp))
-                            TesadufSecondaryButton(stringResource(R.string.mm_home), onHome, Modifier.fillMaxWidth())
-                        }
+    }
+}
+
+
+private val SceneBottom = Color(0xFF080617)
+
+@Composable
+private fun BottomControls(
+    visible: Boolean,
+    state: MatchmakingUiState,
+    online: Boolean,
+    viewModel: MatchmakingViewModel,
+    cancel: () -> Unit,
+    onHome: () -> Unit,
+) {
+    AnimatedVisibility(visible, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+        Column(
+            Modifier
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .widthIn(max = 480.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            val error: AppError? = if (!online) AppError.NoInternet else state.error
+            AnimatedVisibility(error != null, enter = fadeIn(), exit = fadeOut()) {
+                error?.let { TesadufInlineMessage(it, Modifier.padding(bottom = 12.dp), onRetry = viewModel::retryNow) }
+            }
+            AnimatedVisibility(state.timedOut, enter = fadeIn(), exit = fadeOut()) {
+                TesadufGlassCard(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                    Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(R.string.mm_timeout_title), style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(6.dp))
+                        Text(stringResource(R.string.mm_timeout_body), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(14.dp))
+                        TesadufButton(stringResource(R.string.mm_retry), viewModel::restart, Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(8.dp))
+                        TesadufSecondaryButton(stringResource(R.string.mm_home), onHome, Modifier.fillMaxWidth())
                     }
                 }
-                AnimatedVisibility(state.showNotFoundHint && error == null && !state.timedOut, enter = fadeIn(), exit = fadeOut()) {
-                    TesadufGlassCard(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-                        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(stringResource(R.string.mm_not_found), style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(4.dp))
-                            Text(stringResource(R.string.mm_not_found_sub), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
-                            TesadufTextButton(stringResource(R.string.mm_keep_searching), viewModel::keepSearching, color = TesadufColors.Cyan)
-                        }
+            }
+            AnimatedVisibility(state.showNotFoundHint && error == null && !state.timedOut, enter = fadeIn(), exit = fadeOut()) {
+                TesadufGlassCard(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                    Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(R.string.mm_not_found), style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(4.dp))
+                        Text(stringResource(R.string.mm_not_found_sub), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                        TesadufTextButton(stringResource(R.string.mm_keep_searching), viewModel::keepSearching, color = TesadufColors.Cyan)
                     }
                 }
-                if (!state.timedOut) {
-                    TesadufSecondaryButton(stringResource(R.string.mm_cancel), onClick = cancel, modifier = Modifier.fillMaxWidth())
-                }
+            }
+            if (!state.timedOut) {
+                TesadufSecondaryButton(stringResource(R.string.mm_cancel), onClick = cancel, modifier = Modifier.fillMaxWidth())
             }
         }
     }

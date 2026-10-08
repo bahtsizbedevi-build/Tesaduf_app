@@ -69,7 +69,6 @@ private enum class SettingsDialog { NOTIFICATIONS, ABOUT, SIGN_OUT }
 fun SettingsScreen(
     repository: TesadufRepository,
     onChangeAvatar: () -> Unit,
-    onHistory: () -> Unit,
     onBlocked: () -> Unit,
     onSignedOut: () -> Unit,
 ) {
@@ -115,7 +114,6 @@ fun SettingsScreen(
                 TesadufGlassCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(vertical = 6.dp, horizontal = 4.dp)) {
                         TesadufListRow(TIcons.Palette, stringResource(R.string.settings_change_avatar), onChangeAvatar)
-                        TesadufListRow(TIcons.History, stringResource(R.string.settings_history), onHistory)
                         TesadufListRow(TIcons.Block, stringResource(R.string.settings_blocked), onBlocked)
                         TesadufListRow(TIcons.Bell, stringResource(R.string.settings_notifications), { dialog = SettingsDialog.NOTIFICATIONS })
                         TesadufListRow(TIcons.Info, stringResource(R.string.settings_about), { dialog = SettingsDialog.ABOUT })

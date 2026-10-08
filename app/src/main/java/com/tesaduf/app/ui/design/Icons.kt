@@ -44,5 +44,11 @@ object TIcons {
     val UserBlock: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_user_round_x)
     val ShieldAlert: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_shield_alert)
     val DoorOpen: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_door_open)
+    val Laugh: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_laugh)
+    val Wow: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_zap)
+    val Flame: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_flame)
+    val Check: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_check)
+    val CheckCheck: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_check_check)
+    val Lightbulb: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_lightbulb)
     val Hourglass: ImageVector @Composable get() = ImageVector.vectorResource(Lucide.drawable.lucide_ic_hourglass)
 }

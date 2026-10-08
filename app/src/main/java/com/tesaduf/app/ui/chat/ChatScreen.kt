@@ -3,6 +3,8 @@ package com.tesaduf.app.ui.chat
 import com.tesaduf.app.ui.design.TIcons
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -13,7 +15,9 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,11 +52,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -62,6 +69,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -77,6 +85,7 @@ import com.tesaduf.app.data.NetworkMonitor
 import com.tesaduf.app.model.Decision
 import com.tesaduf.app.model.Match
 import com.tesaduf.app.model.MatchStatus
+import com.tesaduf.app.model.Reaction
 import com.tesaduf.app.model.ReportReason
 import com.tesaduf.app.network.AppError
 import com.tesaduf.app.network.parseInstantMillis
@@ -106,6 +115,7 @@ import com.tesaduf.app.ui.theme.TesadufColors
 import com.tesaduf.app.util.formatClock
 import com.tesaduf.app.util.formatCountdown
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.produceState
 
 private enum class ChatOverlay { MENU, REPORT, CONFIRM_END, CONFIRM_BLOCK }
@@ -158,12 +168,20 @@ fun ChatScreen(
     var typingGaze by remember { mutableStateOf<Offset?>(null) }
     val match = state.match
 
-    TesadufBackground {
+    val icebreakers = stringArrayResource(R.array.icebreakers)
+    val icebreaker = icebreakers[state.icebreakerIndex.coerceIn(0, icebreakers.lastIndex)]
+    var prefill by remember { mutableStateOf<String?>(null) }
+    val kaderMood by animateFloatAsState(
+        if (match?.status == MatchStatus.DESTINY) 1f else 0f, tween(1_600, easing = FastOutSlowInEasing), label = "mood",
+    )
+
+    TesadufBackground(mood = { kaderMood }) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             ChatTopBar(
                 match = match,
                 online = online,
                 messageCount = state.messages.size,
+                partnerTyping = state.partnerTyping,
                 typingGaze = typingGaze,
                 serverNow = serverNow,
                 onBack = onBack,
@@ -219,8 +237,15 @@ fun ChatScreen(
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         when {
                             state.loading && state.messages.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) { TesadufLoadingDots() }
-                            state.messages.isEmpty() && match?.status == MatchStatus.ACTIVE -> EmptyChat()
-                            else -> MessageList(state.messages, onRetry = viewModel::retry)
+                            else -> MessageList(
+                                messages = state.messages,
+                                partnerLastRead = match?.partnerLastRead ?: 0L,
+                                partnerTyping = state.partnerTyping,
+                                icebreaker = icebreaker.takeIf { match?.isOpen == true },
+                                onIcebreaker = { prefill = it },
+                                onRetry = viewModel::retry,
+                                onReact = viewModel::react,
+                            )
                         }
                     }
                     when (match?.status) {
@@ -230,6 +255,9 @@ fun ChatScreen(
                             myAvatar = myAvatar,
                             typingGaze = typingGaze,
                             onTypingGaze = { typingGaze = it },
+                            onTyping = viewModel::onTyping,
+                            prefill = prefill,
+                            onPrefillConsumed = { prefill = null },
                             onSend = viewModel::send,
                         )
                     }
@@ -335,6 +363,7 @@ private fun ChatTopBar(
     match: Match?,
     online: Boolean,
     messageCount: Int,
+    partnerTyping: Boolean,
     typingGaze: Offset?,
     serverNow: () -> Long,
     onBack: () -> Unit,
@@ -356,11 +385,19 @@ private fun ChatTopBar(
         TesadufIconButton(TIcons.ArrowLeft, stringResource(R.string.back), onBack)
         if (match != null) {
             // Watches the user's text from above while they type; otherwise glances / idles.
-            TesadufAvatar(match.partner.avatar, 46.dp, gaze = typingGaze?.let { Offset(it.x, 1f) } ?: glance)
+            TesadufAvatar(
+                match.partner.avatar, 46.dp,
+                gaze = when {
+                    partnerTyping -> Offset(-0.5f, 0.9f) // busy typing on their side
+                    typingGaze != null -> Offset(typingGaze.x, 1f)
+                    else -> glance
+                },
+            )
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(match.partner.displayId, style = IdTextStyle.copy(fontSize = 16.sp), maxLines = 1)
                 val (color, label) = when {
+                    partnerTyping && online -> TesadufColors.Cyan to stringResource(R.string.chat_typing)
                     !online -> TesadufColors.Warning to stringResource(R.string.chat_reconnecting)
                     match.partner.online -> TesadufColors.Success to stringResource(R.string.chat_partner_online)
                     else -> TesadufColors.TextMuted to stringResource(R.string.chat_partner_away)
@@ -384,13 +421,23 @@ private fun ChatTopBar(
 }
 
 @Composable
-private fun MessageList(messages: List<UiMessage>, onRetry: (String) -> Unit) {
+private fun MessageList(
+    messages: List<UiMessage>,
+    partnerLastRead: Long,
+    partnerTyping: Boolean,
+    icebreaker: String?,
+    onIcebreaker: (String) -> Unit,
+    onRetry: (String) -> Unit,
+    onReact: (UiMessage, Reaction) -> Unit,
+) {
     val listState = rememberLazyListState()
     val reversed = remember(messages) { messages.asReversed() }
     // Each message animates in once, the first time it is shown.
     val seen = remember { mutableSetOf<String>() }
+    var reactingKey by remember { mutableStateOf<String?>(null) }
+    val lastMine = remember(messages) { messages.lastOrNull { it.mine && it.serverId != null }?.key }
     // Newest is index 0 with reverseLayout; stay pinned to the bottom when already there.
-    LaunchedEffect(messages.size) {
+    LaunchedEffect(messages.size, partnerTyping) {
         if (listState.firstVisibleItemIndex <= 2) listState.animateScrollToItem(0)
     }
     LazyColumn(
@@ -400,30 +447,128 @@ private fun MessageList(messages: List<UiMessage>, onRetry: (String) -> Unit) {
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        if (partnerTyping) {
+            item(key = "typing") { TypingBubble(Modifier.animateItem()) }
+        }
         items(reversed, key = { it.key }) { message ->
             TesadufMessageBubble(
-                message,
-                onRetry,
-                Modifier.animateItem(fadeInSpec = null, placementSpec = tween(220), fadeOutSpec = null),
+                message = message,
+                onRetry = onRetry,
+                modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = tween(220), fadeOutSpec = null),
                 animateIn = remember(message.key) { seen.add(message.key) },
+                receipt = if (message.key == lastMine) {
+                    if ((message.serverId ?: Long.MAX_VALUE) <= partnerLastRead) Receipt.SEEN else Receipt.DELIVERED
+                } else {
+                    null
+                },
+                reacting = reactingKey == message.key,
+                onLongPress = { if (!message.mine && message.serverId != null) reactingKey = if (reactingKey == message.key) null else message.key },
+                onReact = { reaction ->
+                    reactingKey = null
+                    onReact(message, reaction)
+                },
             )
+        }
+        if (icebreaker != null) {
+            item(key = "icebreaker") { IcebreakerCard(icebreaker, onIcebreaker, showHint = messages.isEmpty()) }
         }
     }
 }
 
-/** Chat bubble: mine = cyan→blue accent, theirs = dark glass. Timestamp kept small. */
+enum class Receipt { DELIVERED, SEEN }
+
+@Composable
+private fun IcebreakerCard(question: String, onUse: (String) -> Unit, showHint: Boolean) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        TesadufGlassCard(
+            Modifier.widthIn(max = 340.dp),
+            fill = TesadufColors.Purple.copy(alpha = 0.08f),
+            stroke = TesadufColors.Purple.copy(alpha = 0.3f),
+            onClick = { onUse(question) },
+            onClickLabel = stringResource(R.string.icebreaker_tap),
+        ) {
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(TIcons.Lightbulb, contentDescription = null, tint = TesadufColors.Warning, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.icebreaker_label), style = MaterialTheme.typography.labelMedium, color = TesadufColors.Warning)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(question, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.icebreaker_tap), style = MaterialTheme.typography.labelSmall, color = TesadufColors.TextMuted)
+            }
+        }
+        if (showHint) {
+            Spacer(Modifier.height(10.dp))
+            Text(stringResource(R.string.chat_empty_sub), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+/** "…" bubble while the partner types. */
+@Composable
+private fun TypingBubble(modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
+    Box(modifier.fillMaxWidth()) {
+        Box(
+            Modifier
+                .clip(shape)
+                .background(TesadufColors.Card)
+                .border(1.dp, TesadufColors.StrokeSoft, shape)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        ) { TesadufLoadingDots(dotSize = 7.dp) }
+    }
+}
+
+@Composable
+private fun reactionIcon(reaction: Reaction): ImageVector = when (reaction) {
+    Reaction.HEART -> TIcons.Heart
+    Reaction.LAUGH -> TIcons.Laugh
+    Reaction.WOW -> TIcons.Wow
+    Reaction.SAD -> TIcons.Frown
+    Reaction.FIRE -> TIcons.Flame
+}
+
+private fun reactionColor(reaction: Reaction): Color = when (reaction) {
+    Reaction.HEART -> TesadufColors.Pink
+    Reaction.LAUGH -> TesadufColors.Warning
+    Reaction.WOW -> TesadufColors.Cyan
+    Reaction.SAD -> TesadufColors.Blue
+    Reaction.FIRE -> Color(0xFFFF7A45)
+}
+
+private fun reactionLabel(reaction: Reaction): Int = when (reaction) {
+    Reaction.HEART -> R.string.reaction_heart
+    Reaction.LAUGH -> R.string.reaction_laugh
+    Reaction.WOW -> R.string.reaction_wow
+    Reaction.SAD -> R.string.reaction_sad
+    Reaction.FIRE -> R.string.reaction_fire
+}
+
+/**
+ * Chat bubble: mine = cyan→blue accent, theirs = dark glass. Long-press a partner message
+ * to react; reactions sit on the bubble's corner. Flagged messages stay hidden until tapped.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TesadufMessageBubble(
     message: UiMessage,
     onRetry: (String) -> Unit,
     modifier: Modifier = Modifier,
     animateIn: Boolean = false,
+    receipt: Receipt? = null,
+    reacting: Boolean = false,
+    onLongPress: () -> Unit = {},
+    onReact: (Reaction) -> Unit = {},
 ) {
     val mine = message.mine
     val entrance = remember { Animatable(if (animateIn) 0f else 1f) }
     LaunchedEffect(Unit) {
-        if (animateIn) entrance.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow))
+        if (animateIn) entrance.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))
     }
+    var revealed by rememberSaveable(message.key) { mutableStateOf(false) }
+    val hidden = message.flagged && !revealed
     val shape = if (mine) RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp) else RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
     Column(
         modifier
@@ -431,58 +576,115 @@ fun TesadufMessageBubble(
             .graphicsLayer {
                 val p = entrance.value
                 alpha = p.coerceIn(0f, 1f)
-                translationX = (1f - p) * (if (mine) 28.dp.toPx() else -28.dp.toPx())
-                scaleX = 0.94f + 0.06f * p
+                if (mine) {
+                    // Sent: launches up from the composer.
+                    translationY = (1f - p) * 36.dp.toPx()
+                    translationX = (1f - p) * 12.dp.toPx()
+                } else {
+                    translationX = (1f - p) * -28.dp.toPx()
+                }
+                scaleX = 0.92f + 0.08f * p
                 scaleY = scaleX
                 transformOrigin = TransformOrigin(if (mine) 1f else 0f, 1f)
             },
         horizontalAlignment = if (mine) Alignment.End else Alignment.Start,
     ) {
-        Box(
-            Modifier
-                .widthIn(max = 300.dp)
-                .clip(shape)
-                .then(
-                    if (mine) Modifier.background(TesadufColors.MineBubble)
-                    else Modifier.background(TesadufColors.Card).border(1.dp, TesadufColors.StrokeSoft, shape),
-                )
-                .graphicsLayer { alpha = if (message.state == SendState.SENDING) 0.7f else 1f }
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+        Box {
+            Box(
+                Modifier
+                    .widthIn(max = 300.dp)
+                    .padding(bottom = if (message.reaction != null) 10.dp else 0.dp)
+                    .clip(shape)
+                    .then(
+                        if (mine) Modifier.background(TesadufColors.MineBubble)
+                        else Modifier.background(TesadufColors.Card).border(1.dp, if (reacting) TesadufColors.Cyan.copy(alpha = 0.5f) else TesadufColors.StrokeSoft, shape),
+                    )
+                    .combinedClickable(
+                        onClick = { if (hidden) revealed = true },
+                        onLongClick = onLongPress,
+                        onLongClickLabel = stringResource(R.string.chat_react_hint),
+                    )
+                    .graphicsLayer { alpha = if (message.state == SendState.SENDING) 0.7f else 1f }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            ) {
+                if (hidden) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(TIcons.Incognito, contentDescription = null, tint = TesadufColors.Warning, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.chat_flagged), style = MaterialTheme.typography.bodyMedium, color = TesadufColors.TextSecondary)
+                    }
+                } else {
+                    Text(message.body, style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                }
+            }
+            message.reaction?.let { reaction ->
+                val pop = remember(reaction) { Animatable(0.4f) }
+                LaunchedEffect(reaction) { pop.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMedium)) }
+                Box(
+                    Modifier
+                        .align(if (mine) Alignment.BottomStart else Alignment.BottomEnd)
+                        .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(TesadufColors.CardHigh)
+                        .border(1.dp, reactionColor(reaction).copy(alpha = 0.6f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(reactionIcon(reaction), stringResource(reactionLabel(reaction)), tint = reactionColor(reaction), modifier = Modifier.size(14.dp))
+                }
+            }
+        }
+        AnimatedVisibility(reacting, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+            Row(
+                Modifier
+                    .padding(top = 6.dp)
+                    .clip(Shapes.pill)
+                    .background(TesadufColors.CardHigh)
+                    .border(1.dp, TesadufColors.Stroke, Shapes.pill)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            ) {
+                Reaction.entries.forEach { r ->
+                    TesadufIconButton(
+                        reactionIcon(r), stringResource(reactionLabel(r)), { onReact(r) },
+                        tint = if (message.reaction == r) reactionColor(r) else TesadufColors.TextSecondary,
+                    )
+                }
+            }
+        }
+        Row(
+            Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(message.body, style = MaterialTheme.typography.bodyLarge, color = Color.White)
+            val meta = when (message.state) {
+                SendState.SENDING -> stringResource(R.string.chat_sending)
+                SendState.FAILED -> stringResource(R.string.chat_failed)
+                SendState.SENT -> formatClock(message.createdAt)
+            }
+            Text(
+                meta,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (message.state == SendState.FAILED) TesadufColors.Danger else TesadufColors.TextMuted,
+                modifier = if (message.state == SendState.FAILED) {
+                    Modifier.heightIn(min = 32.dp).clickable(role = Role.Button) { onRetry(message.key) }
+                } else {
+                    Modifier
+                },
+            )
+            if (receipt != null && message.state == SendState.SENT) {
+                Spacer(Modifier.width(6.dp))
+                val seen = receipt == Receipt.SEEN
+                Icon(
+                    if (seen) TIcons.CheckCheck else TIcons.Check, contentDescription = null,
+                    tint = if (seen) TesadufColors.Cyan else TesadufColors.TextMuted, modifier = Modifier.size(13.dp),
+                )
+                Spacer(Modifier.width(3.dp))
+                Text(
+                    stringResource(if (seen) R.string.chat_seen else R.string.chat_delivered),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (seen) TesadufColors.Cyan else TesadufColors.TextMuted,
+                )
+            }
         }
-        val meta = when (message.state) {
-            SendState.SENDING -> stringResource(R.string.chat_sending)
-            SendState.FAILED -> stringResource(R.string.chat_failed)
-            SendState.SENT -> formatClock(message.createdAt)
-        }
-        Text(
-            meta,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (message.state == SendState.FAILED) TesadufColors.Danger else TesadufColors.TextMuted,
-            modifier = Modifier
-                .padding(horizontal = 6.dp, vertical = 2.dp)
-                .then(
-                    if (message.state == SendState.FAILED) {
-                        Modifier.heightIn(min = 32.dp).clickable(role = Role.Button) { onRetry(message.key) }
-                    } else {
-                        Modifier
-                    },
-                ),
-        )
-    }
-}
-
-@Composable
-private fun EmptyChat() {
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(stringResource(R.string.chat_empty_title), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-        Text(stringResource(R.string.chat_empty_sub), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
     }
 }
 
@@ -490,16 +692,25 @@ private const val TYPING_IDLE_MS = 2_000L
 
 /**
  * Composer: the user's own living avatar watches the text being typed, a rounded glass
- * field and the send button.
+ * field and the send button (a neon ring bursts out of it on send).
  */
 @Composable
 private fun Composer(
     myAvatar: String?,
     typingGaze: Offset?,
     onTypingGaze: (Offset?) -> Unit,
+    onTyping: () -> Unit,
+    prefill: String?,
+    onPrefillConsumed: () -> Unit,
     onSend: (String) -> Boolean,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(prefill) {
+        if (prefill != null) {
+            text = prefill
+            onPrefillConsumed()
+        }
+    }
     // Follow the text only while actually typing; 2 s after the last keystroke the
     // avatars go back to their own random life (blinking, glancing around).
     LaunchedEffect(text) {
@@ -514,6 +725,8 @@ private fun Composer(
     }
     var focused by remember { mutableStateOf(false) }
     val canSend = text.isNotBlank()
+    val burst = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxWidth()) {
         Row(
@@ -535,7 +748,12 @@ private fun Composer(
             ) {
                 BasicTextField(
                     value = text,
-                    onValueChange = { if (it.length <= ChatViewModel.MAX_MESSAGE_LENGTH) text = it },
+                    onValueChange = {
+                        if (it.length <= ChatViewModel.MAX_MESSAGE_LENGTH) {
+                            if (it.length > text.length) onTyping()
+                            text = it
+                        }
+                    },
                     textStyle = MaterialTheme.typography.bodyLarge,
                     cursorBrush = SolidColor(TesadufColors.Cyan),
                     maxLines = 5,
@@ -556,11 +774,26 @@ private fun Composer(
             Box(
                 Modifier
                     .size(52.dp)
+                    .drawBehind {
+                        val b = burst.value
+                        if (b > 0f && b < 1f) {
+                            drawCircle(
+                                TesadufColors.Cyan.copy(alpha = 0.6f * (1f - b)),
+                                radius = size.minDimension / 2 * (1f + 0.9f * b),
+                                style = Stroke(2.dp.toPx()),
+                            )
+                        }
+                    }
                     .clip(CircleShape)
                     .background(if (canSend) TesadufColors.CoolAccent else SolidColor(TesadufColors.Glass))
                     .clickable(enabled = canSend, role = Role.Button) {
                         if (onSend(text)) {
                             text = ""
+                            scope.launch {
+                                burst.snapTo(0f)
+                                burst.animateTo(1f, tween(520, easing = FastOutSlowInEasing))
+                                burst.snapTo(0f)
+                            }
                         }
                     },
                 contentAlignment = Alignment.Center,

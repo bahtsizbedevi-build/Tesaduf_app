@@ -78,6 +78,8 @@ fun DrawScope.softGlow(color: Color, center: Offset, radius: Float, alpha: Float
 fun TesadufBackground(
     modifier: Modifier = Modifier,
     particles: Boolean = false,
+    /** 0 = default night, 1 = Kader: warmer pink/purple ambience. Animate it for a soft shift. */
+    mood: () -> Float = { 0f },
     content: @Composable BoxScope.() -> Unit,
 ) {
     val drift: State<Float> = if (particles) {
@@ -93,8 +95,13 @@ fun TesadufBackground(
             .background(Brush.verticalGradient(listOf(TesadufColors.Night, TesadufColors.NightRaised, TesadufColors.Night)))
             .drawBehind {
                 val r = size.maxDimension * 0.5f
-                softGlow(TesadufColors.Cyan, Offset(0f, size.height * 0.08f), r, 0.07f)
-                softGlow(TesadufColors.Purple, Offset(size.width, size.height * 0.92f), r, 0.09f)
+                val m = mood().coerceIn(0f, 1f)
+                softGlow(TesadufColors.Cyan, Offset(0f, size.height * 0.08f), r, 0.07f * (1f - m))
+                softGlow(TesadufColors.Purple, Offset(size.width, size.height * 0.92f), r, 0.09f + 0.06f * m)
+                if (m > 0f) {
+                    softGlow(TesadufColors.Pink, Offset(0f, size.height * 0.15f), r, 0.12f * m)
+                    softGlow(TesadufColors.Pink, Offset(size.width * 0.6f, size.height * 0.55f), r * 0.8f, 0.05f * m)
+                }
                 if (particles) {
                     val t = drift.value
                     for (i in 0 until PARTICLE_COUNT) {

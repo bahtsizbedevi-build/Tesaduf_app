@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,8 +38,7 @@ import com.tesaduf.app.ui.chat.ChatViewModel
 import com.tesaduf.app.ui.chats.ChatsScreen
 import com.tesaduf.app.ui.design.BottomItem
 import com.tesaduf.app.ui.design.TesadufBottomBar
-import com.tesaduf.app.ui.history.HistoryScreen
-import com.tesaduf.app.ui.history.HistoryViewModel
+import com.tesaduf.app.ui.chats.ChatListViewModel
 import com.tesaduf.app.ui.home.HomeScreen
 import com.tesaduf.app.ui.matchmaking.MatchmakingScreen
 import com.tesaduf.app.ui.matchmaking.MatchmakingViewModel
@@ -55,7 +55,6 @@ object Routes {
     const val PROFILE_SETUP = "profile_setup?edit={edit}"
     const val HOME = "home"
     const val CHATS = "chats"
-    const val HISTORY = "history"
     const val SETTINGS = "settings"
     const val BLOCKED = "blocked"
     const val MATCHMAKING = "matchmaking"
@@ -146,7 +145,7 @@ fun TesadufNavHost(container: AppContainer, navController: NavHostController = r
                 )
             }
             composable(Routes.CHATS) {
-                val vm: HistoryViewModel = viewModel(factory = viewModelFactory { initializer { HistoryViewModel(repository) } })
+                val vm: ChatListViewModel = viewModel(factory = viewModelFactory { initializer { ChatListViewModel(repository) } })
                 ChatsScreen(
                     viewModel = vm,
                     serverNow = repository.clock::now,
@@ -154,20 +153,10 @@ fun TesadufNavHost(container: AppContainer, navController: NavHostController = r
                     onStart = { navController.navigate(Routes.MATCHMAKING) { launchSingleTop = true } },
                 )
             }
-            composable(Routes.HISTORY) {
-                val vm: HistoryViewModel = viewModel(factory = viewModelFactory { initializer { HistoryViewModel(repository) } })
-                HistoryScreen(
-                    viewModel = vm,
-                    onBack = { navController.popBackStack() },
-                    onOpen = { matchId -> navController.navigate(Routes.chat(matchId)) { launchSingleTop = true } },
-                    onStartFirst = { navController.navigate(Routes.MATCHMAKING) { launchSingleTop = true } },
-                )
-            }
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     repository = repository,
                     onChangeAvatar = { navController.navigate(Routes.profileSetup(edit = true)) },
-                    onHistory = { navController.navigate(Routes.HISTORY) { launchSingleTop = true } },
                     onBlocked = { navController.navigate(Routes.BLOCKED) },
                     onSignedOut = {
                         navController.navigate(Routes.ONBOARDING) {
@@ -198,7 +187,8 @@ fun TesadufNavHost(container: AppContainer, navController: NavHostController = r
                 arguments = listOf(navArgument("matchId") { type = NavType.StringType }),
             ) { entry ->
                 val matchId = entry.arguments?.getString("matchId").orEmpty()
-                val vm: ChatViewModel = viewModel(factory = viewModelFactory { initializer { ChatViewModel(matchId, repository) } })
+                val icebreakers = stringArrayResource(R.array.icebreakers).size
+                val vm: ChatViewModel = viewModel(factory = viewModelFactory { initializer { ChatViewModel(matchId, repository, icebreakers) } })
                 ChatScreen(
                     viewModel = vm,
                     networkMonitor = container.networkMonitor,

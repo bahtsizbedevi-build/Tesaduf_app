@@ -10,6 +10,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -384,6 +385,24 @@ fun TesadufTimer(expiresAtMs: Long, serverNow: () -> Long, modifier: Modifier = 
     }
     val urgent = remaining <= 3 * 60_000L
     val critical = remaining <= 60_000L
+    val finalSeconds = remaining in 0..10_000L
+    // Heartbeat: a quick double "thump" every second in the last 10 s.
+    val beat: State<Float> = if (finalSeconds) {
+        rememberInfiniteTransition(label = "beat").animateFloat(
+            1f, 1f,
+            infiniteRepeatable(keyframes {
+                durationMillis = 1_000
+                1f at 0
+                1.12f at 120
+                1f at 260
+                1.07f at 380
+                1f at 560
+            }),
+            label = "b",
+        )
+    } else {
+        remember { mutableFloatStateOf(1f) }
+    }
     val pulse: State<Float> = if (critical) {
         rememberInfiniteTransition(label = "timerPulse").animateFloat(
             0.6f, 1f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "p",
@@ -398,9 +417,13 @@ fun TesadufTimer(expiresAtMs: Long, serverNow: () -> Long, modifier: Modifier = 
     Box(
         modifier
             .semantics { contentDescription = description }
-            .graphicsLayer { alpha = pulse.value }
+            .graphicsLayer {
+                alpha = pulse.value
+                scaleX = beat.value
+                scaleY = beat.value
+            }
             .drawBehind {
-                if (urgent) softGlow(TesadufColors.Pink, center, size.maxDimension * 0.7f, 0.18f)
+                if (urgent) softGlow(TesadufColors.Pink, center, size.maxDimension * (if (finalSeconds) 1f else 0.7f), if (finalSeconds) 0.32f else 0.18f)
             }
             .clip(Shapes.pill)
             .background(TesadufColors.Night.copy(alpha = 0.6f))
