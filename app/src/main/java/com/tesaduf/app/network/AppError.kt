@@ -20,6 +20,7 @@ sealed class AppError(@param:StringRes val messageRes: Int) {
     data object MatchClosed : AppError(R.string.error_match_closed)
     data object RateLimited : AppError(R.string.error_rate_limited)
     data object Invalid : AppError(R.string.error_invalid)
+    data object AccessoryLocked : AppError(R.string.error_accessory_locked)
     data class Server(val code: String) : AppError(R.string.error_server)
 
     val isConnectivity: Boolean get() = this is NoInternet || this is Timeout
@@ -31,6 +32,7 @@ sealed class AppError(@param:StringRes val messageRes: Int) {
             "MATCH_NOT_FOUND", "INVALID_MATCH_ID" -> MatchNotFound
             "MATCH_NOT_OPEN", "MATCH_NOT_EXPIRED" -> MatchClosed
             "RATE_LIMITED" -> RateLimited
+            "ACCESSORY_LOCKED" -> AccessoryLocked
             "INVALID_MESSAGE", "INVALID_CLIENT_ID", "INVALID_DECISION", "INVALID_REASON",
             "INVALID_DETAILS", "INVALID_JSON", "INVALID_ACTION", "INVALID_MODE", "UNSUPPORTED_MODE" -> Invalid
             "SERVER_MISCONFIGURED" -> NotConfigured

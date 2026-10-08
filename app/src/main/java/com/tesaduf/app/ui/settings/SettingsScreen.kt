@@ -46,6 +46,8 @@ import com.tesaduf.app.R
 import com.tesaduf.app.notifications.Reminders
 import com.tesaduf.app.repository.SessionState
 import com.tesaduf.app.repository.TesadufRepository
+import com.tesaduf.app.ui.design.Badge
+import com.tesaduf.app.ui.design.BadgeShowcase
 import com.tesaduf.app.ui.design.ButtonTone
 import com.tesaduf.app.ui.design.TesadufAvatar
 import com.tesaduf.app.ui.design.TesadufBackground
@@ -110,8 +112,17 @@ fun SettingsScreen(
                         listOf(
                             ready.stats.tesadufCount to stringResource(R.string.stat_tesaduf),
                             ready.stats.destinyCount to stringResource(R.string.stat_destiny),
+                            ready.stats.bestStreak to stringResource(R.string.stat_best_streak),
                         ),
                     )
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        stringResource(R.string.badges_title, ready.stats.badges.size, Badge.entries.size),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    BadgeShowcase(ready.stats.badges, Modifier.fillMaxWidth())
                     Spacer(Modifier.height(18.dp))
                 }
                 TesadufGlassCard(Modifier.fillMaxWidth()) {

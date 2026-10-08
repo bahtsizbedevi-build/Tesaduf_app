@@ -78,6 +78,11 @@ data class ProfileStats(
     @SerialName("tesaduf_count") val tesadufCount: Int = 0,
     @SerialName("destiny_count") val destinyCount: Int = 0,
     @SerialName("active_days") val activeDays: Int = 0,
+    @SerialName("messages_sent") val messagesSent: Int = 0,
+    val streak: Int = 0,
+    @SerialName("best_streak") val bestStreak: Int = 0,
+    val badges: List<String> = emptyList(),
+    @SerialName("unlocked_accessories") val unlockedAccessories: List<Int> = listOf(1, 2, 3),
 )
 
 @Serializable

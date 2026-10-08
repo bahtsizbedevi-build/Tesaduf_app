@@ -125,7 +125,11 @@ fun ProfileSetupScreen(
                             TesadufReadOnlyField(stringResource(R.string.profile_id_label), state.profile.displayId)
                             Spacer(Modifier.height(24.dp))
                             SectionLabel(stringResource(R.string.profile_accessory))
-                            AccessoryPicker(style.color, style.accessory, { accessory = it.index }, Modifier.fillMaxWidth())
+                            AccessoryPicker(
+                                style.color, style.accessory, { accessory = it.index }, Modifier.fillMaxWidth(),
+                                unlocked = state.stats.unlockedAccessories,
+                                current = AvatarStyle.parse(state.profile.avatar).accessory,
+                            )
                             error?.let {
                                 Spacer(Modifier.height(16.dp))
                                 TesadufInlineMessage(it)

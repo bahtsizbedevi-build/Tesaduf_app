@@ -251,7 +251,17 @@ console.log("\n# Avatar / stats / blocked users");
 const aliColor = ali1.profile.avatar.split("_")[1];
 const otherColor = aliColor === "1" ? "2" : "1";
 const av = await rpc("ali", `select public.update_avatar('av_${aliColor}_5')`);
-check("accessory updated (crown)", av.avatar === `av_${aliColor}_5`);
+check("accessory updated (crown, unlocked by Kader)", av.avatar === `av_${aliColor}_5`);
+const stx = await rpc("ali", "select public.ensure_profile()");
+check("badges include first_kader", stx.stats.badges.includes("first_kader") && stx.stats.badges.includes("first_tesaduf"), JSON.stringify(stx.stats.badges));
+check("streak is 1 today", stx.stats.streak === 1 && stx.stats.best_streak === 1, JSON.stringify(stx.stats));
+check("headphones locked without streak", (await rpcError("ali", `select public.update_avatar('av_${aliColor}_6')`))?.includes("ACCESSORY_LOCKED"));
+check("free accessory always allowed", (await rpc("ali", `select public.update_avatar('av_${aliColor}_2')`)).avatar === `av_${aliColor}_2`);
+await db.query("update public.matches set started_at = started_at - interval '1 day' where id = (select id from public.matches where user_a=$1 or user_b=$1 order by started_at limit 1)", [users.ali]);
+await db.query("update public.matches set started_at = started_at - interval '2 days' where id = (select id from public.matches where user_a=$1 or user_b=$1 order by started_at limit 1 offset 1)", [users.ali]);
+const sty = await rpc("ali", "select public.ensure_profile()");
+check("3-day streak computed", sty.stats.best_streak === 3 && sty.stats.badges.includes("streak_3"), JSON.stringify(sty.stats));
+check("headphones unlocked after streak", (await rpc("ali", `select public.update_avatar('av_${aliColor}_6')`)).avatar === `av_${aliColor}_6`);
 check("colour cannot be changed", (await rpcError("ali", `select public.update_avatar('av_${otherColor}_2')`))?.includes("INVALID_AVATAR"));
 check("invalid avatar rejected", (await rpcError("ali", "select public.update_avatar('orb_9')"))?.includes("INVALID_AVATAR"));
 check("unknown accessory rejected", (await rpcError("ali", `select public.update_avatar('av_${aliColor}_7')`))?.includes("INVALID_AVATAR"));
@@ -259,7 +269,7 @@ check("avatar cannot be set directly", (await rpcError("ali", "update public.pro
 const st = await rpc("ali", "select public.ensure_profile()");
 check("stats count tesadüfs", st.stats.tesaduf_count >= 3, JSON.stringify(st.stats));
 check("stats count destiny", st.stats.destiny_count === 1, JSON.stringify(st.stats));
-check("stats count active days", st.stats.active_days === 1, JSON.stringify(st.stats));
+check("stats count active days", st.stats.active_days >= 1, JSON.stringify(st.stats));
 const bl = await rpc("ece", "select public.list_blocks()");
 check("list_blocks shows anonymous ids only",
   bl.length === 1 && /^[A-HJ-NP-Z2-9]{8}$/.test(bl[0].anonymous_id) && !JSON.stringify(bl).includes(users.can));

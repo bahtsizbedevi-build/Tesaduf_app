@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,13 +52,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-enum class Accessory(val index: Int, val labelRes: Int) {
+enum class Accessory(val index: Int, val labelRes: Int, val requirementRes: Int? = null) {
     None(1, R.string.accessory_none),
     Beanie(2, R.string.accessory_beanie),
     Cap(3, R.string.accessory_cap),
-    PartyHat(4, R.string.accessory_party),
-    Crown(5, R.string.accessory_crown),
-    Headphones(6, R.string.accessory_headphones);
+    PartyHat(4, R.string.accessory_party, R.string.unlock_party),
+    Crown(5, R.string.accessory_crown, R.string.unlock_crown),
+    Headphones(6, R.string.accessory_headphones, R.string.unlock_headphones);
 
     companion object {
         fun of(index: Int): Accessory = entries.firstOrNull { it.index == index } ?: None
@@ -305,6 +306,8 @@ fun AccessoryPicker(
     selected: Accessory,
     onSelect: (Accessory) -> Unit,
     modifier: Modifier = Modifier,
+    unlocked: List<Int> = Accessory.entries.map { it.index },
+    current: Accessory = selected,
 ) {
     FlowRow(
         modifier,
@@ -313,18 +316,28 @@ fun AccessoryPicker(
     ) {
         Accessory.entries.forEach { accessory ->
             val isSelected = accessory == selected
+            val locked = accessory.index !in unlocked && accessory != current
             val name = stringResource(accessory.labelRes)
+            val requirement = accessory.requirementRes?.let { stringResource(it) }
             Column(
                 Modifier
                     .widthIn(min = 88.dp)
                     .clip(Shapes.field)
-                    .selectable(isSelected, onClick = { onSelect(accessory) }, role = Role.RadioButton)
+                    .selectable(isSelected, enabled = !locked, onClick = { onSelect(accessory) }, role = Role.RadioButton)
                     .background(if (isSelected) TesadufColors.Cyan.copy(alpha = 0.10f) else TesadufColors.Glass)
                     .border(1.dp, if (isSelected) TesadufColors.Cyan.copy(alpha = 0.6f) else TesadufColors.StrokeSoft, Shapes.field)
                     .padding(horizontal = 8.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                TesadufAvatar(AvatarStyle(color, accessory).key, 56.dp, alive = false, contentDescription = name)
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    TesadufAvatar(
+                        AvatarStyle(color, accessory).key, 56.dp, alive = false, contentDescription = name,
+                        modifier = Modifier.graphicsLayer { alpha = if (locked) 0.35f else 1f },
+                    )
+                    if (locked) {
+                        Icon(TIcons.LockKeyhole, contentDescription = null, tint = TesadufColors.TextSecondary, modifier = Modifier.size(16.dp))
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     name,
@@ -332,6 +345,9 @@ fun AccessoryPicker(
                     color = if (isSelected) TesadufColors.Cyan else TesadufColors.TextSecondary,
                     textAlign = TextAlign.Center,
                 )
+                if (locked && requirement != null) {
+                    Text(requirement, style = MaterialTheme.typography.labelSmall, color = TesadufColors.TextMuted, textAlign = TextAlign.Center)
+                }
             }
         }
     }

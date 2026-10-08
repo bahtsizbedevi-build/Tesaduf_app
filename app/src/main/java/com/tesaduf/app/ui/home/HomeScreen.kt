@@ -195,6 +195,7 @@ private fun ReadyContent(
             listOf(
                 state.stats.tesadufCount to stringResource(R.string.stat_tesaduf),
                 state.stats.destinyCount to stringResource(R.string.stat_destiny),
+                state.stats.streak to stringResource(R.string.stat_streak),
             ),
         )
         Spacer(Modifier.height(16.dp))

@@ -58,6 +58,26 @@
     <string name="home_caption">15 dakikalık anonim bir sohbet.</string>
     <string name="stat_tesaduf">Tesadüf</string>
     <string name="stat_destiny">Kader</string>
+    <string name="stat_streak">Gün Serisi</string>
+    <string name="stat_best_streak">En İyi Seri</string>
+    <string name="badges_title">Rozetler (%1$d/%2$d)</string>
+    <string name="badge_first_tesaduf">İlk Tesadüf</string>
+    <string name="badge_first_tesaduf_hint">İlk tesadüfünü yaşa.</string>
+    <string name="badge_first_kader">İlk Kader</string>
+    <string name="badge_first_kader_hint">İlk Kader eşleşmeni yakala.</string>
+    <string name="badge_ten">10 Tesadüf</string>
+    <string name="badge_ten_hint">10 tesadüf yaşa.</string>
+    <string name="badge_streak">3 Gün Seri</string>
+    <string name="badge_streak_hint">3 gün üst üste tesadüf yap.</string>
+    <string name="badge_night">Gece Kuşu</string>
+    <string name="badge_night_hint">Gece yarısından sonra bir tesadüf yaşa.</string>
+    <string name="badge_chatty">Sohbet Ustası</string>
+    <string name="badge_chatty_hint">100 mesaj gönder.</string>
+    <string name="badge_kader5">Kader Avcısı</string>
+    <string name="badge_kader5_hint">5 Kader eşleşmesi yakala.</string>
+    <string name="unlock_party">5 tesadüf</string>
+    <string name="unlock_crown">İlk Kader</string>
+    <string name="unlock_headphones">3 gün seri</string>
     <string name="home_live_title">Devam eden bir tesadüfün var</string>
     <plurals name="home_live_many">
         <item quantity="one">Devam eden %1$d tesadüfün var</item>
@@ -271,5 +291,6 @@
     <string name="error_match_closed">Bu tesadüf artık mesaj kabul etmiyor.</string>
     <string name="error_rate_limited">Biraz yavaşla, çok hızlı gönderiyorsun.</string>
     <string name="error_invalid">Geçersiz istek.</string>
+    <string name="error_accessory_locked">Bu aksesuarın kilidi henüz açılmadı.</string>
     <string name="error_server">Bir şeyler ters gitti. Tekrar dene.</string>
 </resources>
