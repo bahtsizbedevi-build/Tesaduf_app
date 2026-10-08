@@ -394,6 +394,7 @@ private fun ChatTopBar(
             // Watches the user's text from above while they type; otherwise glances / idles.
             TesadufAvatar(
                 match.partner.avatar, 46.dp,
+                interactive = true,
                 mood = if (match.status == MatchStatus.DESTINY && partnerMood == AvatarMood.Idle) AvatarMood.Idle else partnerMood,
                 gaze = when {
                     partnerTyping -> Offset(-0.5f, 0.9f) // busy typing on their side
@@ -743,7 +744,7 @@ private fun Composer(
             verticalAlignment = Alignment.Bottom,
         ) {
             if (myAvatar != null) {
-                TesadufAvatar(myAvatar, 46.dp, gaze = typingGaze, mood = myMood, modifier = Modifier.padding(bottom = 4.dp))
+                TesadufAvatar(myAvatar, 46.dp, gaze = typingGaze, mood = myMood, interactive = true, modifier = Modifier.padding(bottom = 4.dp))
                 Spacer(Modifier.width(6.dp))
             }
             Row(

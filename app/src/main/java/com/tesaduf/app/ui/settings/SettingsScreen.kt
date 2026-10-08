@@ -103,7 +103,7 @@ fun SettingsScreen(
             TesadufTopBar(title = stringResource(R.string.settings_title))
             Column(Modifier.widthIn(max = 480.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (ready != null) {
-                    TesadufAvatar(ready.profile.avatar, 104.dp)
+                    TesadufAvatar(ready.profile.avatar, 104.dp, interactive = true)
                     Spacer(Modifier.height(12.dp))
                     Text(ready.profile.displayId, style = IdTextStyle.copy(fontSize = 22.sp))
                     Text(stringResource(R.string.anonymous_user), style = MaterialTheme.typography.bodySmall)

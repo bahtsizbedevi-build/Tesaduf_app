@@ -13,6 +13,7 @@
     <string name="retry">Tekrar dene</string>
     <string name="read_only">Değiştirilemez</string>
     <string name="avatar_content_description">Anonim avatar</string>
+    <string name="avatar_poke">Avatarı dürt</string>
     <string name="accessory_none">Yok</string>
     <string name="accessory_beanie">Bere</string>
     <string name="accessory_cap">Kep</string>

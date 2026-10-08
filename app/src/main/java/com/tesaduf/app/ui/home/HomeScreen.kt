@@ -45,7 +45,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.input.pointer.pointerInput
+import com.tesaduf.app.ui.design.AvatarMood
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -254,9 +260,34 @@ private fun AvatarHalo(avatar: String, size: Dp) {
     val float by transition.animateFloat(
         -1f, 1f, infiniteRepeatable(tween(3_200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "f",
     )
+    // Eyes follow a finger on the halo; otherwise the phone's tilt.
+    val tilt by rememberTiltGaze()
+    var touch by remember { mutableStateOf<Offset?>(null) }
+    var greeted by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(700)
+        greeted = true
+    }
     Box(
         Modifier
             .size(size, size * 0.82f)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    fun toGaze(p: Offset) = Offset(
+                        ((p.x / this.size.width) - 0.5f) * 2.4f,
+                        ((p.y / this.size.height) - 0.5f) * 2.4f,
+                    )
+                    touch = toGaze(down.position)
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        if (!change.pressed) break
+                        touch = toGaze(change.position)
+                    }
+                    touch = null
+                }
+            }
             .drawBehind {
                 val c = Offset(this.size.width / 2, this.size.height * 0.5f)
                 val rx = this.size.width * 0.47f
@@ -288,6 +319,10 @@ private fun AvatarHalo(avatar: String, size: Dp) {
         TesadufAvatar(
             avatar,
             size * 0.5f,
+            gaze = touch ?: tilt,
+            // Says hello with a little hop when Home opens.
+            mood = if (greeted) AvatarMood.Idle else AvatarMood.Joy,
+            interactive = true,
             modifier = Modifier.graphicsLayer { translationY = float * 5.dp.toPx() },
         )
     }

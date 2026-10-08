@@ -51,6 +51,25 @@ import com.tesaduf.app.ui.theme.TesadufColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.rotate
+import kotlinx.coroutines.coroutineScope
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 enum class Accessory(val index: Int, val labelRes: Int, val requirementRes: Int? = null) {
     None(1, R.string.accessory_none),
@@ -95,10 +114,14 @@ private val AvatarPalette: List<Pair<Color, Color>> = listOf(
 )
 
 /**
- * The living anonymous avatar: a glossy orb with eyes. When [alive], it blinks at random
- * intervals and glances around; a non-null [gaze] (x, y in -1..1) makes it look at that
- * point instead (e.g. the text being typed). All motion is read in the draw phase only,
- * so it never triggers recomposition, and frame-clock animations pause off-screen.
+ * The living anonymous avatar: a glossy orb with eyes and a tiny mouth.
+ *
+ * Idle life (when [alive]): breathing squash/stretch, a slow sway, random blinks and the
+ * occasional wink, glances around, now and then a happy wiggle. A non-null [gaze]
+ * (x, y in -1..1) makes it look at that point (typing, finger, phone tilt).
+ * [mood] sets the expression from outside; with [onTap] (or [interactive]) a tap makes it
+ * squish and react on its own (giggle, wink, surprise or a burst of hearts).
+ * All motion is read in the draw phase only, so animation never recomposes.
  */
 @Composable
 fun TesadufAvatar(
@@ -108,25 +131,51 @@ fun TesadufAvatar(
     alive: Boolean = true,
     gaze: Offset? = null,
     mood: AvatarMood = AvatarMood.Idle,
+    interactive: Boolean = false,
+    onTap: (() -> Unit)? = null,
     contentDescription: String? = null,
 ) {
     val style = AvatarStyle.parse(avatarKey)
     val (from, to) = AvatarPalette[style.color - 1]
     val description = contentDescription ?: stringResource(R.string.avatar_content_description)
+    val scope = rememberCoroutineScope()
 
-    val eyeOpen = remember { Animatable(1f) }
+    val leftOpen = remember { Animatable(1f) }
+    val rightOpen = remember { Animatable(1f) }
     val lookX = remember { Animatable(0f) }
     val lookY = remember { Animatable(0f) }
+    val hop = remember { Animatable(0f) }
+    val squish = remember { Animatable(0f) } // >0 squashed, <0 stretched
+    val wiggle = remember { Animatable(0f) }
+    val hearts = remember { Animatable(0f) } // 0..1 burst progress (0 = none)
+    val moodBlend = remember { Animatable(1f) }
+    var reaction by remember { mutableStateOf<AvatarMood?>(null) }
     val target = rememberUpdatedState(gaze)
+
+    val time: State<Float> = if (alive) {
+        rememberInfiniteTransition(label = "life").animateFloat(
+            0f, 1_000f, infiniteRepeatable(tween(1_000_000, easing = LinearEasing)), label = "t",
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
 
     if (alive) {
         LaunchedEffect(Unit) {
-            // Blinking: occasionally a double blink.
+            // Blinks; sometimes a double blink, sometimes a cheeky wink.
             while (true) {
                 delay(Random.nextLong(2_200, 5_600))
-                repeat(if (Random.nextFloat() < 0.2f) 2 else 1) {
-                    eyeOpen.animateTo(0.08f, tween(80))
-                    eyeOpen.animateTo(1f, tween(130))
+                if (Random.nextFloat() < 0.12f) {
+                    val eye = if (Random.nextBoolean()) leftOpen else rightOpen
+                    eye.animateTo(0.05f, tween(110))
+                    delay(260)
+                    eye.animateTo(1f, tween(160))
+                } else {
+                    repeat(if (Random.nextFloat() < 0.2f) 2 else 1) {
+                        launch { leftOpen.animateTo(0.08f, tween(80)); leftOpen.animateTo(1f, tween(130)) }
+                        rightOpen.animateTo(0.08f, tween(80))
+                        rightOpen.animateTo(1f, tween(130))
+                    }
                 }
             }
         }
@@ -142,19 +191,38 @@ fun TesadufAvatar(
                 }
             }
         }
+        LaunchedEffect(Unit) {
+            // Every so often a little happy wiggle.
+            while (true) {
+                delay(Random.nextLong(9_000, 16_000))
+                wiggle.animateTo(1f, tween(140))
+                wiggle.animateTo(0f, spring(dampingRatio = 0.25f, stiffness = Spring.StiffnessLow))
+            }
+        }
     }
-    // Mood transitions: a little hop for joy/love, eyes droop when sleepy.
-    val hop = remember { Animatable(0f) }
-    val moodBlend = remember { Animatable(0f) }
+
+    suspend fun jump() = coroutineScope {
+        squish.animateTo(0.18f, tween(90))
+        launch {
+            squish.animateTo(-0.12f, tween(160))
+            squish.animateTo(0f, spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMedium))
+        }
+        hop.animateTo(1f, tween(170, easing = FastOutSlowInEasing))
+        hop.animateTo(0f, spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMedium))
+    }
+
+    suspend fun burstHearts() {
+        hearts.snapTo(0.001f)
+        hearts.animateTo(1f, tween(1_400, easing = LinearEasing))
+        hearts.snapTo(0f)
+    }
+
     LaunchedEffect(mood) {
         moodBlend.snapTo(0f)
         launch { moodBlend.animateTo(1f, tween(260)) }
-        if (mood == AvatarMood.Joy || mood == AvatarMood.Love) {
-            hop.animateTo(1f, tween(160, easing = FastOutSlowInEasing))
-            hop.animateTo(0f, spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMedium))
-        }
+        if (mood == AvatarMood.Love) launch { burstHearts() }
+        if (mood == AvatarMood.Joy || mood == AvatarMood.Love) jump()
     }
-    val currentMood = rememberUpdatedState(mood)
 
     LaunchedEffect(gaze) {
         // Released: ease back to centre, then idle glances take over.
@@ -163,14 +231,64 @@ fun TesadufAvatar(
         lookY.animateTo(g.y.coerceIn(-1f, 1f), spring(stiffness = Spring.StiffnessMediumLow))
     }
 
+    val tappable = interactive || onTap != null
+    val tapLabel = stringResource(R.string.avatar_poke)
+    val react: () -> Unit = {
+        onTap?.invoke()
+        scope.launch {
+            val pick = listOf(AvatarMood.Joy, AvatarMood.Love, AvatarMood.Surprised, AvatarMood.Wink).random()
+            reaction = pick
+            moodBlend.snapTo(0f)
+            launch { moodBlend.animateTo(1f, tween(200)) }
+            launch { jump() }
+            if (pick == AvatarMood.Love) launch { burstHearts() }
+            if (pick == AvatarMood.Wink) {
+                rightOpen.animateTo(0.05f, tween(110))
+                delay(450)
+                rightOpen.animateTo(1f, tween(160))
+            } else {
+                delay(1_300)
+            }
+            reaction = null
+        }
+    }
+    val shownMood = rememberUpdatedState(reaction ?: mood)
+
     Box(
         modifier
             .size(size)
             .semantics { this.contentDescription = description }
-            .graphicsLayer { translationY = -hop.value * size.toPx() * 0.12f }
+            .then(
+                if (tappable) {
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        role = Role.Button,
+                        onClickLabel = tapLabel,
+                        onClick = react,
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .graphicsLayer {
+                val t = time.value
+                val breathe = sin(t * 2.2f) * 0.018f
+                val sq = squish.value
+                translationY = -hop.value * size.toPx() * 0.14f + sin(t * 1.3f) * size.toPx() * 0.012f
+                scaleX = 1f + breathe + sq * 0.9f
+                scaleY = 1f - breathe - sq
+                rotationZ = sin(t * 0.9f) * 2.2f + sin(t * 18f) * 7f * wiggle.value
+                transformOrigin = TransformOrigin(0.5f, 0.95f)
+            }
             .drawBehind {
-                drawOrb(from, to, eyeOpen.value, Offset(lookX.value, lookY.value), currentMood.value, moodBlend.value)
-                drawAccessory(style.accessory)
+                val m = shownMood.value
+                drawOrb(from, to, leftOpen.value, rightOpen.value, Offset(lookX.value, lookY.value), m, moodBlend.value)
+                // Accessories lag behind a hop a little (wobble).
+                rotate(-hop.value * 9f + wiggle.value * sin(time.value * 18f) * 6f, orbCenter()) {
+                    drawAccessory(style.accessory)
+                }
+                if (hearts.value > 0f) drawHeartBurst(hearts.value)
             },
     )
 }
@@ -179,63 +297,126 @@ fun TesadufAvatar(
 private fun DrawScope.orbCenter() = Offset(size.width / 2, size.height * 0.62f)
 private fun DrawScope.orbRadius() = size.minDimension * 0.33f
 
-private fun DrawScope.drawOrb(from: Color, to: Color, eyeOpen: Float, look: Offset, mood: AvatarMood, blend: Float) {
+private fun heartPathAt(cx: Float, cy: Float, s: Float) = Path().apply {
+    moveTo(cx, cy + s * 0.45f)
+    cubicTo(cx - s * 0.75f, cy - s * 0.05f, cx - s * 0.45f, cy - s * 0.6f, cx, cy - s * 0.25f)
+    cubicTo(cx + s * 0.45f, cy - s * 0.6f, cx + s * 0.75f, cy - s * 0.05f, cx, cy + s * 0.45f)
+    close()
+}
+
+private fun DrawScope.drawHeartBurst(p: Float) {
+    val c = orbCenter()
+    val r = orbRadius()
+    for (i in 0 until 6) {
+        val a = (-150f + i * 24f) * (PI.toFloat() / 180f)
+        val dist = r * (0.9f + 1.1f * p)
+        val x = c.x + cos(a) * dist
+        val y = c.y + sin(a) * dist - r * 0.6f * p
+        val alpha = (if (p < 0.2f) p / 0.2f else 1f) * (1f - p)
+        val col = if (i % 2 == 0) TesadufColors.Pink else Color(0xFFFF8FD0)
+        drawPath(heartPathAt(x, y, r * (0.22f + 0.08f * (i % 3))), col.copy(alpha = alpha))
+    }
+}
+
+private val MouthDark = Color(0xFF3B1240)
+
+private fun DrawScope.drawOrb(
+    from: Color,
+    to: Color,
+    leftOpen: Float,
+    rightOpen: Float,
+    look: Offset,
+    mood: AvatarMood,
+    blend: Float,
+) {
     val c = orbCenter()
     val r = orbRadius()
     softGlow(from, c, r * 1.45f, 0.28f)
     drawCircle(Brush.linearGradient(listOf(from, to), c - Offset(r, r), c + Offset(r, r)), r, c)
     // Gloss highlight.
     softGlow(Color.White, c - Offset(r * 0.38f, r * 0.45f), r * 0.55f, 0.38f)
+    // Blush on happy moods.
+    if (mood == AvatarMood.Love || mood == AvatarMood.Joy || mood == AvatarMood.Wink) {
+        for (dx in listOf(-0.5f, 0.5f)) softGlow(Color(0xFFFF6FB5), Offset(c.x + r * dx, c.y + r * 0.22f), r * 0.24f, 0.55f * blend)
+    }
     // Eyes follow the look direction; blinking squashes their height. Moods reshape them.
     val eyeW = r * 0.17f
     val shift = Offset(look.x * r * 0.22f, look.y * r * 0.18f)
     val white = Color.White.copy(alpha = 0.96f * blend.coerceIn(0.3f, 1f))
-    for (dx in listOf(-0.24f, 0.24f)) {
+    listOf(-0.24f, 0.24f).forEachIndexed { idx, dx ->
         val ex = c.x + r * dx + shift.x
         val ey = c.y - r * 0.08f + shift.y
+        val open = if (idx == 0) leftOpen else rightOpen
         when (mood) {
-            AvatarMood.Love -> {
-                val s = r * 0.26f * (0.6f + 0.4f * blend)
-                val heart = Path().apply {
-                    moveTo(ex, ey + s * 0.45f)
-                    cubicTo(ex - s * 0.75f, ey - s * 0.05f, ex - s * 0.45f, ey - s * 0.6f, ex, ey - s * 0.25f)
-                    cubicTo(ex + s * 0.45f, ey - s * 0.6f, ex + s * 0.75f, ey - s * 0.05f, ex, ey + s * 0.45f)
-                    close()
-                }
-                drawPath(heart, Color(0xFFFFE3F3))
-            }
-            AvatarMood.Joy -> {
-                // Happy "^ ^" arcs.
-                drawArc(
-                    white, 200f, 140f, false,
-                    Offset(ex - eyeW * 0.9f, ey - eyeW * 0.5f), Size(eyeW * 1.8f, eyeW * 1.6f),
-                    style = Stroke(r * 0.07f, cap = StrokeCap.Round),
-                )
-            }
+            AvatarMood.Love -> drawPath(heartPathAt(ex, ey, r * 0.26f * (0.6f + 0.4f * blend)), Color(0xFFFFE3F3))
+            AvatarMood.Joy -> drawArc(
+                white, 200f, 140f, false,
+                Offset(ex - eyeW * 0.9f, ey - eyeW * 0.5f), Size(eyeW * 1.8f, eyeW * 1.6f),
+                style = Stroke(r * 0.07f, cap = StrokeCap.Round),
+            )
             AvatarMood.Sleepy -> {
-                // Heavy lids: a low, flat oval.
                 val h = r * 0.07f
                 drawOval(white, Offset(ex - eyeW / 2, ey + r * 0.06f - h / 2), Size(eyeW * 1.1f, h))
             }
-            AvatarMood.Idle -> {
-                val eyeH = r * 0.30f * eyeOpen.coerceIn(0.05f, 1f)
-                drawOval(white, Offset(ex - eyeW / 2, ey - eyeH / 2), Size(eyeW, eyeH))
+            AvatarMood.Surprised -> {
+                val d = eyeW * 1.35f
+                drawOval(white, Offset(ex - d / 2, ey - d * 0.65f), Size(d, d * 1.3f))
+            }
+            AvatarMood.Wink, AvatarMood.Idle -> {
+                if (open < 0.2f) {
+                    // Closed eye: a soft curved line.
+                    drawArc(
+                        white, 20f, 140f, false,
+                        Offset(ex - eyeW * 0.8f, ey - eyeW * 0.6f), Size(eyeW * 1.6f, eyeW * 1.2f),
+                        style = Stroke(r * 0.06f, cap = StrokeCap.Round),
+                    )
+                } else {
+                    val eyeH = r * 0.30f * open
+                    drawOval(white, Offset(ex - eyeW / 2, ey - eyeH / 2), Size(eyeW, eyeH))
+                }
             }
         }
     }
+    // Mouth.
+    val mx = c.x + shift.x * 0.6f
+    val my = c.y + r * 0.3f + shift.y * 0.5f
+    val mouth = Color.White.copy(alpha = 0.85f * blend.coerceIn(0.3f, 1f))
+    when (mood) {
+        AvatarMood.Joy -> {
+            val w = r * 0.42f
+            val path = Path().apply {
+                moveTo(mx - w / 2, my - r * 0.04f)
+                quadraticTo(mx, my + r * 0.32f, mx + w / 2, my - r * 0.04f)
+                close()
+            }
+            drawPath(path, MouthDark.copy(alpha = 0.85f))
+            drawPath(path, mouth, style = Stroke(r * 0.045f, join = StrokeJoin.Round))
+        }
+        AvatarMood.Surprised, AvatarMood.Sleepy -> {
+            val d = r * (if (mood == AvatarMood.Surprised) 0.16f else 0.1f)
+            drawOval(MouthDark.copy(alpha = 0.85f), Offset(mx - d / 2, my - d * 0.3f), Size(d, d * 1.2f))
+        }
+        else -> drawArc(
+            mouth, 25f, 130f, false,
+            Offset(mx - r * 0.13f, my - r * 0.12f), Size(r * 0.26f, r * 0.18f),
+            style = Stroke(r * 0.045f, cap = StrokeCap.Round),
+        )
+    }
     if (mood == AvatarMood.Sleepy) {
-        // A small floating "z".
         val z = Offset(c.x + r * 0.7f, c.y - r * 0.85f)
         val zs = r * 0.18f
         val zPath = Path().apply {
-            moveTo(z.x, z.y); lineTo(z.x + zs, z.y); lineTo(z.x, z.y + zs); lineTo(z.x + zs, z.y + zs)
+            moveTo(z.x, z.y)
+            lineTo(z.x + zs, z.y)
+            lineTo(z.x, z.y + zs)
+            lineTo(z.x + zs, z.y + zs)
         }
         drawPath(zPath, Color.White.copy(alpha = 0.7f * blend), style = Stroke(r * 0.05f, cap = StrokeCap.Round))
     }
 }
 
 /** Facial expression of the living avatar. */
-enum class AvatarMood { Idle, Love, Joy, Sleepy }
+enum class AvatarMood { Idle, Love, Joy, Sleepy, Surprised, Wink }
 
 private fun DrawScope.drawAccessory(accessory: Accessory) {
     val c = orbCenter()
